@@ -29,6 +29,7 @@ def get_wealth(
     initial_capital=0,
     wage_growth_rate=0,
     yearly_returns=None,
+    retirement_real_rate=0.06,
 ):
     total = initial_capital
     found_breakeven = False
@@ -67,12 +68,12 @@ def get_wealth(
         ):
             first_million = True
             print(
-                f"In {i+1} years you accumulated to ${int(total / 1_000_000)} million dollars"
+                f"In {i+1} years you accumulated to ${int(total / 1_000_000)} million"
             )
             million_mult = int(total / 1_000_000)
 
         if (
-            yearly_income_from_savings + non_wage_income > yearly_fixed_cost
+            total * retirement_real_rate + non_wage_income > yearly_fixed_cost
             and not found_breakeven
         ):
             found_breakeven = True
@@ -83,7 +84,7 @@ def get_wealth(
         f"You accumulated over the {num_years_simulated} num_years_simulated of saving {yearly_income-yearly_fixed_cost:,}/year at a real rate of {yearly_real_rate}: {round(total, ndigits = 2):,}"
     )
     print(
-        f"This will give you a real income (yet to be taxed) of: {round(yearly_income_from_savings, ndigits = 2):,}"
+        f"This will give you a real income (yet to be taxed) of: {round(total * retirement_real_rate, ndigits = 2):,}"
     )
 
     year_total_df = pd.DataFrame(list_year_total, columns=["year", "total"])
