@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
@@ -11,6 +14,35 @@ st.set_page_config(
     page_icon="🔥",
     layout="wide",
 )
+
+
+# Function to load configuration from file
+def load_config():
+    config_file = Path("config.local.json")
+    if config_file.exists():
+        try:
+            with open(config_file, "r") as f:
+                config_data = json.load(f)
+            return config_data
+        except Exception as e:
+            st.sidebar.error(f"Error loading configuration: {str(e)}")
+    return None
+
+
+# Function to save configuration to file
+def save_config(config_data):
+    config_file = Path("config.local.json")
+    try:
+        with open(config_file, "w") as f:
+            json.dump(config_data, f, indent=4)
+        return True
+    except Exception as e:
+        st.sidebar.error(f"Error saving configuration: {str(e)}")
+        return False
+
+
+# Load saved configuration if it exists
+saved_config = load_config()
 
 # Title and description
 st.title("🔥 FIRE Calculator")
@@ -29,7 +61,7 @@ with st.sidebar.expander("Income & Expenses", expanded=True):
     yearly_wage = st.number_input(
         "Net Salary Income ($)",
         min_value=0,
-        value=80000,
+        value=saved_config.get("yearly_wage", 80000) if saved_config else 80000,
         step=1000,
         help="Your total yearly salary after taxes and deductions (this will become 0 after retirement)",
     )
@@ -37,7 +69,7 @@ with st.sidebar.expander("Income & Expenses", expanded=True):
     non_wage_income = st.number_input(
         "Additional Net Income ($)",
         min_value=0,
-        value=0,
+        value=saved_config.get("non_wage_income", 0) if saved_config else 0,
         step=1000,
         help="Additional yearly income that continues after retirement (e.g., rental income, side gigs, pension) - after taxes",
     )
@@ -45,7 +77,7 @@ with st.sidebar.expander("Income & Expenses", expanded=True):
     monthly_expenses = st.number_input(
         "Monthly Expenses ($)",
         min_value=0,
-        value=4000,
+        value=saved_config.get("monthly_expenses", 4000) if saved_config else 4000,
         step=100,
         help="Your average monthly expenses",
     )
@@ -53,7 +85,7 @@ with st.sidebar.expander("Income & Expenses", expanded=True):
     initial_capital = st.number_input(
         "Initial Capital ($)",
         min_value=0,
-        value=50000,
+        value=saved_config.get("initial_capital", 50000) if saved_config else 50000,
         step=1000,
         help="Your current investment portfolio value",
     )
@@ -65,7 +97,9 @@ with st.sidebar.expander("Investment Parameters", expanded=True):
             "Expected Return Rate (%)",
             min_value=1.0,
             max_value=15.0,
-            value=7.0,
+            value=(
+                saved_config.get("expected_return_rate", 7.0) if saved_config else 7.0
+            ),
             step=0.1,
             help="Expected annual return rate on your investments after inflation",
         )
@@ -77,7 +111,11 @@ with st.sidebar.expander("Investment Parameters", expanded=True):
             "Safe Withdrawal Rate (%)",
             min_value=2.0,
             max_value=10.0,
-            value=3.5,
+            value=(
+                saved_config.get("retirement_safe_withdrawal_rate", 3.5)
+                if saved_config
+                else 3.5
+            ),
             step=0.1,
             help="The percentage of your portfolio you plan to withdraw annually in retirement",
         )
@@ -89,7 +127,7 @@ with st.sidebar.expander("Investment Parameters", expanded=True):
             "Wage Growth Rate (%)",
             min_value=0.0,
             max_value=10.0,
-            value=2.0,
+            value=saved_config.get("wage_growth_rate", 2.0) if saved_config else 2.0,
             step=0.1,
             help="Expected annual growth rate of your income",
         )
@@ -102,7 +140,7 @@ with st.sidebar.expander("Simulation Parameters", expanded=True):
         "Years to Simulate",
         min_value=5,
         max_value=50,
-        value=30,
+        value=saved_config.get("simulation_years", 30) if saved_config else 30,
         step=1,
         help="Number of years to simulate",
     )
@@ -111,10 +149,28 @@ with st.sidebar.expander("Simulation Parameters", expanded=True):
         "Planned Retirement Year",
         min_value=1,
         max_value=num_years,
-        value=15,
+        value=saved_config.get("retirement_year", 15) if saved_config else 15,
         step=1,
         help="Year you plan to retire",
     )
+
+# Add save configuration button
+if st.sidebar.button("💾 Save Current Configuration"):
+    config_data = {
+        "yearly_wage": yearly_wage,
+        "monthly_expenses": monthly_expenses,
+        "initial_capital": initial_capital,
+        "expected_return_rate": expected_return_rate
+        * 100,  # Convert back to percentage
+        "retirement_safe_withdrawal_rate": safe_withdrawal_rate
+        * 100,  # Convert back to percentage
+        "wage_growth_rate": wage_growth_rate * 100,  # Convert back to percentage
+        "non_wage_income": non_wage_income,
+        "simulation_years": num_years,
+        "retirement_year": retirement_year,
+    }
+    if save_config(config_data):
+        st.sidebar.success("Configuration saved successfully!")
 
 # Create FIRE configuration
 config = FIREConfig(
