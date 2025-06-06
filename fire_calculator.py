@@ -106,7 +106,6 @@ class FIRECalculator:
             # Check for million dollar milestones
             current_millions = total // 1_000_000
             if current_millions > last_million_milestone:
-                print(f"Year {year + 1}: Reached ${int(current_millions):,} million!")
                 last_million_milestone = current_millions
 
             wealth_data.append((year + 1, total))
@@ -130,7 +129,7 @@ class FIRECalculator:
         self,
         num_years: int,
         initial_return: float = 1.06,
-        phi: float = 0.999,
+        phi: float = 0.98,
         sigma: float = 0.005,
     ) -> List[float]:
         """
@@ -145,15 +144,29 @@ class FIRECalculator:
         Returns:
             List of simulated yearly returns
         """
-        initial_return = initial_return - 1
-        returns = [initial_return]
+        # Center the process around the expected return rate
+        target_return = (
+            self.config.expected_return_rate + 1
+        )  # Convert to multiplier format
+        initial_deviation = initial_return - target_return
 
+        # Start with deviation from target
+        deviations = [initial_deviation]
+
+        # Generate deviations using AR(1)
         for _ in range(1, num_years):
             noise = np.random.normal(0, sigma)
-            new_return = phi * returns[-1] + noise
-            returns.append(new_return)
+            new_deviation = phi * deviations[-1] + noise
+            deviations.append(new_deviation)
 
-        return [x + 1 for x in returns]
+        # Convert deviations back to actual returns centered around target return
+        returns = [deviation + target_return for deviation in deviations]
+
+        # Ensure returns don't go below a minimum threshold (e.g., -20% real return)
+        min_return = 0.8  # -20% real return
+        returns = [max(r, min_return) for r in returns]
+
+        return returns
 
     def save_results(
         self,
@@ -170,12 +183,12 @@ class FIRECalculator:
 def main():
     # Example usage
     config = FIREConfig(
-        yearly_wage=185000,
-        monthly_expenses=5500,
-        initial_capital=208000,
-        expected_return_rate=0.06,
-        retirement_safe_withdrawal_rate=0.06,
-        wage_growth_rate=0.0,
+        yearly_wage=80000,
+        monthly_expenses=4000,
+        initial_capital=50000,
+        expected_return_rate=0.07,
+        retirement_safe_withdrawal_rate=0.035,
+        wage_growth_rate=0.02,
         non_wage_income=0.0,
     )
 
@@ -183,7 +196,7 @@ def main():
 
     # Calculate FIRE trajectory
     wealth_df, income_df, breakeven_year = calculator.calculate_fire_trajectory(
-        num_years=35, retirement_year=10
+        num_years=30, retirement_year=15
     )
 
     # Save results
