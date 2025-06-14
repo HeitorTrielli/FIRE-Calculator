@@ -176,4 +176,4 @@ ENV/
 *.swo
 
 # Local configuration
-config.local.json
+fire_config.json

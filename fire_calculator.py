@@ -1,10 +1,12 @@
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+
+from fire_state import FIREState, FIREStateManager
 
 
 @dataclass
@@ -44,86 +46,142 @@ class FIREConfig:
 
 
 class FIRECalculator:
-    """Financial Independence Retire Early (FIRE) calculator."""
+    """Calculates FIRE-related financial projections."""
 
-    def __init__(self, config: FIREConfig):
-        self.config = config
+    def __init__(self, state_manager: FIREStateManager):
+        self.state_manager = state_manager
 
-    def calculate_fire_trajectory(
-        self,
-        num_years: int,
-        retirement_year: int,
-        custom_returns: Optional[List[float]] = None,
-    ) -> Tuple[pd.DataFrame, pd.DataFrame, int]:
-        """
-        Calculate the wealth trajectory and passive income over time.
+    def calculate_next_year(self, current_state: FIREState) -> Dict[str, Any]:
+        """Calculate the next year's results based on the current state."""
+        # Calculate yearly returns
+        yearly_return = current_state.balance * current_state.annual_return_rate
 
-        Args:
-            num_years: Number of years to simulate
-            retirement_year: Year to retire (1-based)
-            custom_returns: Optional list of custom yearly returns
+        # Determine income for the next year (considering retirement)
+        next_year = current_state.year + 1
 
-        Returns:
-            Tuple containing:
-            - DataFrame with total wealth per year
-            - DataFrame with passive income per year
-            - Year when FIRE is achieved (breakeven year)
-        """
-        if retirement_year > num_years:
-            raise ValueError("Retirement year cannot be greater than simulation years")
+        # Check if we have a predefined state for next year that changes income
+        next_state = self.state_manager.get_state_at_year(next_year)
+        if next_state and next_state.yearly_income == 0:
+            # If next year has yearly_income = 0, use only non-wage income
+            total_income = current_state.non_wage_income
+        elif (
+            current_state.retirement_year is not None
+            and next_year >= current_state.retirement_year
+        ):
+            # Standard retirement logic
+            total_income = current_state.non_wage_income
+        else:
+            # Normal working income
+            total_income = current_state.yearly_income + current_state.non_wage_income
 
-        total = self.config.initial_capital
-        yearly_income = self.config.yearly_wage + self.config.non_wage_income
-        yearly_wage = self.config.yearly_wage
+        # Get lump sum for next year (if any)
+        lump_sum = next_state.lump_sum if next_state else 0.0
 
-        wealth_data = []
-        income_data = []
-        breakeven_year = -1
-        fire_achieved = False
-        last_million_milestone = total // 1_000_000
+        # Calculate new balance
+        new_balance = (
+            current_state.balance
+            + yearly_return
+            + total_income
+            - current_state.yearly_expenses
+            + lump_sum
+        )
 
-        for year in range(num_years):
-            # Calculate return rate for the year
-            return_rate = (
-                custom_returns[year]
-                if custom_returns
-                else self.config.expected_return_rate
+        # Calculate inflation-adjusted values
+        inflation_factor = (1 + current_state.inflation_rate) ** current_state.year
+        adjusted_balance = new_balance / inflation_factor
+        adjusted_income = total_income / inflation_factor
+        adjusted_expenses = current_state.yearly_expenses / inflation_factor
+        adjusted_lump_sum = lump_sum / inflation_factor
+
+        return {
+            "year": next_year,
+            "balance": new_balance,
+            "yearly_return": yearly_return,
+            "yearly_income": total_income,
+            "yearly_expenses": current_state.yearly_expenses,
+            "lump_sum": lump_sum,
+            "adjusted_balance": adjusted_balance,
+            "adjusted_income": adjusted_income,
+            "adjusted_expenses": adjusted_expenses,
+            "adjusted_lump_sum": adjusted_lump_sum,
+        }
+
+    def calculate_until_year(self, target_year: int) -> List[Dict[str, Any]]:
+        """Calculate results until the target year."""
+        if not self.state_manager.states:
+            raise ValueError("No initial state exists")
+
+        results = []
+
+        # Start from year 0 (initial state)
+        current_year = 0
+
+        while current_year < target_year:
+            # Get the current state
+            current_state = self.state_manager.get_state_at_year(current_year)
+            if not current_state:
+                raise ValueError(f"No state exists for year {current_year}")
+
+            # Calculate next year's results
+            next_year_results = self.calculate_next_year(current_state)
+            results.append(next_year_results)
+
+            # Move to next year
+            next_year = current_year + 1
+
+            # Create or update state for next year
+            current_state = self.state_manager.create_next_year_state(
+                current_state, next_year_results["balance"]
             )
 
-            # Apply wage growth before retirement
-            if year < retirement_year - 1:
-                wage_growth = yearly_wage * self.config.wage_growth_rate
-                yearly_wage += wage_growth
-                yearly_income += wage_growth
-            else:
-                yearly_income = self.config.non_wage_income
-                yearly_wage = 0
+            current_year = next_year
 
-            # Calculate total wealth and passive income
-            total += total * return_rate + yearly_income - self.config.yearly_expenses
-            passive_income = total * self.config.retirement_safe_withdrawal_rate
+        return results
 
-            # Check for million dollar milestones
-            current_millions = total // 1_000_000
-            if current_millions > last_million_milestone:
-                last_million_milestone = current_millions
+    def calculate_million_dollar_milestones(
+        self, results: List[Dict[str, Any]] = None, max_years: int = 100
+    ) -> List[Dict[str, Any]]:
+        """Calculate when each million-dollar milestone is reached."""
+        if results is None:
+            results = self.calculate_until_year(max_years)
 
-            wealth_data.append((year + 1, total))
-            income_data.append((year + 1, passive_income))
+        milestones = []
+        current_milestone = 1  # Start with $1M
 
-            # Check if FIRE is achieved
-            if (
-                not fire_achieved
-                and passive_income + self.config.non_wage_income
-                >= self.config.yearly_expenses
-            ):
-                fire_achieved = True
-                breakeven_year = year + 1
+        for result in results:
+            balance = result["balance"]
+            year = result["year"]
 
-        wealth_df = pd.DataFrame(wealth_data, columns=["year", "total"])
-        income_df = pd.DataFrame(income_data, columns=["year", "total"])
+            # Track milestones reached this year
+            milestones_this_year = []
 
-        return wealth_df, income_df, breakeven_year
+            # Check if we've crossed one or more milestones this year
+            while balance >= current_milestone * 1_000_000:
+                milestones_this_year.append(current_milestone)
+                current_milestone += 1
+
+            # If any milestones were reached this year, add a single entry
+            if milestones_this_year:
+                if len(milestones_this_year) == 1:
+                    milestone_text = f"{milestones_this_year[0]}M"
+                else:
+                    milestone_text = (
+                        f"{milestones_this_year[0]}M-{milestones_this_year[-1]}M"
+                    )
+
+                milestones.append(
+                    {
+                        "year": year,
+                        "balance": balance,
+                        "milestone": milestones_this_year[
+                            -1
+                        ],  # Highest milestone reached
+                        "milestone_text": milestone_text,
+                        "milestones_reached": milestones_this_year,
+                    }
+                )
+
+        return milestones
 
     def generate_monte_carlo_returns(
         self,
