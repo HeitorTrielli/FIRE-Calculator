@@ -468,3 +468,25 @@ def remove_scenario_from_sidebar(_clicks, scenarios, aid):
         new_active,
         html.Span("Scenario removed.", style={"color": "#3fb950"}),
     )
+
+
+@callback(
+    Output("scenario-sidebar-msg", "children", allow_duplicate=True),
+    Input("btn-save-scenarios-disk", "n_clicks"),
+    State("scenarios-store", "data"),
+    State("active-scenario-id", "data"),
+    prevent_initial_call=True,
+)
+def save_all_scenarios_to_disk_manual(n_clicks, scenarios, active_id):
+    if not n_clicks:
+        raise PreventUpdate
+    disk_err = persist_scenarios_to_disk(scenarios or [], active_id)
+    if disk_err:
+        return html.Span(
+            f"Could not save to {config_file_path().name}: {disk_err}",
+            style={"color": "#d29922", "fontSize": "0.85rem"},
+        )
+    return html.Span(
+        f"Saved {len(scenarios or [])} scenario(s) to {config_file_path().name}.",
+        style={"color": "#3fb950", "fontSize": "0.85rem"},
+    )

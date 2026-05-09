@@ -11,6 +11,7 @@ from fire_web.bootstrap import (
     duplicate_scenario_record,
     reorder_scenarios_by_id_order,
 )
+from fire_web.simulation import _life_event_chart_x
 
 from app import (
     _fv,
@@ -25,6 +26,12 @@ from app import (
     build_simulation,
     format_results_table,
 )
+
+
+def test_life_event_chart_x_marks_start_of_policy_year():
+    assert _life_event_chart_x(10) == 9
+    assert _life_event_chart_x(1) == 0
+    assert _life_event_chart_x(0) == 0
 
 
 def test_upgrade_scenario_retirement_field_migrates_once():

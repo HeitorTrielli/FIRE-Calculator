@@ -222,7 +222,7 @@ Duplicate-output patterns (`allow_duplicate=True`) follow Dash rules for stores 
 
 ## 10. UI constants (`fire_web/constants.py`)
 
-- **`DEFAULT_CONFIG_FILE`** — `"fire_config.json"` (shared with download default filename).
+- **`DEFAULT_CONFIG_FILE`** — `"fire_config.json"` (path used for auto-save and startup load).
 - **`MODAL_STYLE_OPEN` / `MODAL_STYLE_CLOSED`** — Full-screen overlay flex centering for modals.
 - **`DT_CELL` / `DT_HEADER`** — Dark-theme styling for `DataTable`.
 

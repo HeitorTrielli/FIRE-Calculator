@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import base64
-import copy
-import json
 from typing import Any, Dict, List, Tuple
 
 import dash.dash_table as dash_table
@@ -13,14 +10,11 @@ from dash import Input, Output, State, callback, dcc, html
 from dash.exceptions import PreventUpdate
 
 from fire_debug import log_callback_context, log_event, log_verbose_bundle
-from fire_web.bootstrap import config_file_path, migrate_config_v1_to_scenarios
+from fire_web.bootstrap import CONFIG_HAD_INITIAL
 from fire_web.constants import DT_CELL, DT_HEADER
-from fire_web.constants import DEFAULT_CONFIG_FILE
 from fire_web.persist import (
     life_events_server_debug_snapshot,
     life_events_server_get,
-    life_events_server_reset_from_scenarios,
-    persist_scenarios_to_disk,
 )
 from fire_web.chart_gallery import build_chart_gallery_children
 from fire_web.simulation import (
@@ -220,13 +214,11 @@ def run_calculate(
     Output("results-table-container", "children"),
     Output("main-hint", "children"),
     Input("sim-output-store", "data"),
-    State("config-had-initial", "data"),
     State("scenarios-store", "data"),
     State("active-scenario-id", "data"),
 )
 def render_main(
     sim_data,
-    config_had_initial,
     scenarios,
     active_id,
 ):
@@ -257,7 +249,7 @@ def render_main(
                 ]
             ),
         )
-        if config_had_initial or n_ev or ib != 0:
+        if CONFIG_HAD_INITIAL or n_ev or ib != 0:
             return (
                 [],
                 empty_charts,
@@ -368,95 +360,3 @@ def render_main(
         table,
         html.Div(),
     )
-
-
-def _upload_err(msg: html.Span):
-    return no_update, no_update, msg, no_update, no_update
-
-
-@callback(
-    Output("download-config", "data"),
-    Input("btn-download", "n_clicks"),
-    State("scenarios-store", "data"),
-    State("active-scenario-id", "data"),
-    prevent_initial_call=True,
-)
-def download_config(
-    n_clicks,
-    scenarios,
-    active_id,
-):
-    if not n_clicks:
-        raise PreventUpdate
-
-    scen_list = copy.deepcopy(scenarios or [])
-    out = {
-        "version": 2,
-        "active_scenario_id": active_id,
-        "scenarios": scen_list,
-    }
-    json_str = json.dumps(out, indent=4)
-    return dcc.send_string(json_str, filename=DEFAULT_CONFIG_FILE)
-
-
-@callback(
-    Output("scenarios-store", "data", allow_duplicate=True),
-    Output("active-scenario-id", "data", allow_duplicate=True),
-    Output("upload-status", "children"),
-    Output("config-had-initial", "data"),
-    Output("sim-output-store", "data", allow_duplicate=True),
-    Input("upload-config", "contents"),
-    State("upload-config", "filename"),
-    prevent_initial_call=True,
-)
-def upload_config(contents, filename):
-    if contents is None:
-        raise PreventUpdate
-    try:
-        _content_type, content_string = contents.split(",", 1)
-        raw = base64.b64decode(content_string)
-        config_data = json.loads(raw.decode("utf-8"))
-    except (ValueError, json.JSONDecodeError, UnicodeDecodeError) as e:
-        return _upload_err(html.Span(f"Invalid file: {e}", style={"color": "#f85149"}))
-
-    if config_data.get("version") == 2:
-        scenarios_in = config_data.get("scenarios") or []
-        if not scenarios_in:
-            return _upload_err(
-                html.Span("Invalid v2 file: empty scenarios.", style={"color": "#f85149"})
-            )
-        scenarios = scenarios_in
-        aid = config_data.get("active_scenario_id") or scenarios[0]["id"]
-    else:
-        if not config_data.get("initial_state"):
-            return _upload_err(
-                html.Span(
-                    "Missing initial_state (legacy v1 file).",
-                    style={"color": "#f85149"},
-                )
-            )
-        scenarios, aid = migrate_config_v1_to_scenarios(config_data)
-
-    ids = {s["id"] for s in scenarios}
-    if aid not in ids:
-        aid = scenarios[0]["id"]
-
-    disk_err = persist_scenarios_to_disk(scenarios, aid)
-    if disk_err:
-        life_events_server_reset_from_scenarios(scenarios, "upload_config_disk_error")
-        return (
-            scenarios,
-            aid,
-            html.Span(
-                f"Loaded scenarios but could not write {config_file_path()}: {disk_err}",
-                style={"color": "#f85149"},
-            ),
-            True,
-            None,
-        )
-
-    status = html.Span(
-        f"Loaded {len(scenarios)} scenario(s). Saved to {config_file_path().name}. Run Calculate.",
-        style={"color": "#3fb950"},
-    )
-    return scenarios, aid, status, True, None

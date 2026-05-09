@@ -6,11 +6,10 @@ from dash import dcc, html
 
 from fire_web.bootstrap import (
     ACTIVE_BOOTSTRAP,
-    CONFIG_HAD_INITIAL,
     SCENARIOS_BOOTSTRAP,
     SCFG_BOOT_VALUES,
 )
-from fire_web.constants import MODAL_STYLE_CLOSED
+from fire_web.constants import DEFAULT_CONFIG_FILE, MODAL_STYLE_CLOSED
 
 
 def build_layout() -> html.Div:
@@ -30,9 +29,9 @@ def build_layout() -> html.Div:
                             html.Strong("active"),
                             " for the detailed charts; use ",
                             html.Strong("Compare on chart"),
-                            " to overlay balances. Scenarios are saved automatically to ",
-                            html.Code("fire_config.json"),
-                            " in this project folder.",
+                            " to overlay balances. Saving a scenario or using ",
+                            html.Strong("Save all scenarios"),
+                            " writes your scenarios to disk so they persist between sessions.",
                         ],
                         className="lead-muted",
                         style={"fontSize": "0.8rem", "marginBottom": "0.5rem"},
@@ -53,6 +52,15 @@ def build_layout() -> html.Div:
                         },
                     ),
                     html.Div(id="scenario-list-container", className="scenario-list"),
+                    html.Button(
+                        "Save all scenarios",
+                        id="btn-save-scenarios-disk",
+                        n_clicks=0,
+                        className="btn-outline",
+                        type="button",
+                        title=f"Write all scenarios to {DEFAULT_CONFIG_FILE} in the project folder",
+                        style={"width": "100%", "marginTop": "0.5rem"},
+                    ),
                     dcc.Store(id="scenarios-store", data=SCENARIOS_BOOTSTRAP),
                     dcc.Store(id="active-scenario-id", data=ACTIVE_BOOTSTRAP),
                     dcc.Store(id="scenario-modal-target-id", data=None),
@@ -81,24 +89,6 @@ def build_layout() -> html.Div:
                         n_clicks=0,
                         className="btn-accent",
                     ),
-                    html.Hr(className="sidebar-divider"),
-                    html.H2("Configuration"),
-                    dcc.Upload(
-                        id="upload-config",
-                        children=html.Div(
-                            ["Drag and drop or ", html.A("select a JSON file")]
-                        ),
-                        className="upload-zone",
-                        multiple=False,
-                    ),
-                    html.Div(id="upload-status", style={"fontSize": "0.85rem"}),
-                    html.Button(
-                        "📥 Download Configuration",
-                        id="btn-download",
-                        n_clicks=0,
-                        className="btn-outline",
-                    ),
-                    dcc.Download(id="download-config"),
                 ],
             ),
             html.Div(
@@ -112,7 +102,6 @@ def build_layout() -> html.Div:
                     ),
                     html.Div(id="live-summary", className="live-summary"),
                     dcc.Store(id="sim-output-store", data=None),
-                    dcc.Store(id="config-had-initial", data=CONFIG_HAD_INITIAL),
                     html.Div(id="metrics-row", className="metrics-row"),
                     html.H3("Charts gallery"),
                     dcc.Loading(
@@ -368,7 +357,8 @@ def build_layout() -> html.Div:
                                 className="scenario-config-subheading",
                             ),
                             html.P(
-                                "Events apply from that year forward. Add a life event with "
+                                "Events apply from the start of that simulation year forward "
+                                "(chart markers line up with the first balance change). Add a life event with "
                                 "yearly income 0 to stop wage income from that year on. "
                                 "Named events appear as markers on charts after Calculate.",
                                 className="modal-lead",

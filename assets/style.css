@@ -317,28 +317,6 @@ body {
   border-color: var(--error);
 }
 
-.upload-zone {
-  border-width: 1px !important;
-  border-style: dashed !important;
-  border-color: var(--border) !important;
-  border-radius: 6px;
-  padding: 0.75rem;
-  text-align: center;
-  margin-bottom: 0.5rem;
-  background: rgba(22, 27, 34, 0.6);
-  color: var(--text-muted);
-}
-
-.upload-zone a {
-  color: var(--accent);
-  cursor: pointer;
-}
-
-.upload-zone:hover {
-  border-color: var(--text-subtle) !important;
-  background: rgba(33, 38, 45, 0.8);
-}
-
 .main details summary {
   color: var(--text-muted);
   cursor: pointer;

@@ -27,7 +27,6 @@ The web UI lives in the **`fire_web`** package; **`app.py`** is the entrypoint. 
 
 - **Compare on chart** — Overlay **nominal balance** curves for any scenarios you enable on the overview chart (the active scenario is still what **Calculate** runs for the gallery and table).
 - **Inflation** — Modeled on the expense path when no life-event row overrides that year.
-- **Import / export** — Download all scenarios as JSON; upload to replace or merge via file picker.
 - **Auto-save** — Scenarios persist to **`fire_config.json`** in the project folder when you save from the UI or perform actions that write config (see architecture doc).
 
 ### UI
@@ -103,11 +102,9 @@ Events are listed in **chronological order** by year.
 - **Million Dollar Milestones** — Cards when milestones exist.
 - **Detailed Results** — Full year-by-year table inside an expandable section.
 
-### 6. Configuration file
+### 6. Saved data
 
-- **Download Configuration** — Exports all scenarios as JSON (version 2 format).
-- **Upload Configuration** — Loads a file; legacy single-scenario files are migrated automatically.
-- On startup, if **`fire_config.json`** exists next to **`app.py`**, it is loaded to restore scenarios.
+On startup, if **`fire_config.json`** exists next to **`app.py`**, it is loaded to restore scenarios. You can copy or edit that file manually if you need a backup or hand-edited config.
 
 ---
 
@@ -199,9 +196,7 @@ Older files used top-level **`initial_state`** and **`future_states`** only. The
 
 ### Sharing configs
 
-1. Use **Download Configuration** in the sidebar.
-2. Share the JSON file.
-3. Recipients use **Upload Configuration** to load it (ensure `fire_config.json` is writable if you rely on auto-save).
+Copy **`fire_config.json`** between machines or share it like any other file; keep the same structure (see **JSON shape** above).
 
 ---
 
@@ -262,7 +257,6 @@ MIT License — see repository license file.
 2. **Compare shows one line** — Enable **Compare on chart** on multiple scenarios.  
 3. **Life event rejected** — Add at least one financial field besides year/name.  
 4. **Config not sticking** — Check write permissions for **`fire_config.json`** in the project directory.  
-5. **Upload errors** — Use valid JSON; v2 must include a non-empty **`scenarios`** array; v1 must include **`initial_state`**.  
 
 ---
 

@@ -216,6 +216,18 @@ def _assign_life_event_vertical_tiers(
     return tiers
 
 
+def _life_event_chart_x(policy_year: int) -> int:
+    """Horizontal position for a life event on the balance chart.
+
+    ``(x, balance)`` uses ``x = 0`` for today and ``x = k`` for the balance at the
+    **end** of simulation year ``k``. A row stored as ``year = N`` first changes
+    cash flows on the step **into** year ``N`` (the segment from ``N-1`` to ``N``).
+    Draw the marker at ``N - 1`` so it marks the **beginning** of year ``N``,
+    aligned with that inflection.
+    """
+    return max(0, int(policy_year) - 1)
+
+
 def _life_event_sorted_year_labels(pl: Dict[str, Any]) -> List[Tuple[int, str]]:
     out: List[Tuple[int, str]] = []
     for ev in sorted(
@@ -240,17 +252,19 @@ def _life_event_tiers_per_payload(
     per_pl: List[List[Tuple[int, str]]] = [
         _life_event_sorted_year_labels(pl) for pl in payloads
     ]
-    flat: List[Tuple[int, str, int, int]] = []
+    flat: List[Tuple[int, str, int, int, int]] = []
     for pl_idx, items in enumerate(per_pl):
         for j, pair in enumerate(items):
-            flat.append((pair[0], pair[1], pl_idx, j))
+            y_pol = pair[0]
+            x_plot = _life_event_chart_x(y_pol)
+            flat.append((x_plot, pair[1], pl_idx, j, y_pol))
     flat.sort(key=lambda r: (r[0], r[2], r[3]))
     tiers_flat = _assign_life_event_vertical_tiers(
-        [(y, ann) for y, ann, _, _ in flat],
+        [(x_plot, ann) for x_plot, ann, _, _, _ in flat],
         x_span,
     )
     out: List[List[int]] = [[0] * len(items) for items in per_pl]
-    for tier, (_, _, pl_idx, j) in zip(tiers_flat, flat):
+    for tier, (_, _, pl_idx, j, _) in zip(tiers_flat, flat):
         out[pl_idx][j] = tier
     return out
 
@@ -282,7 +296,8 @@ def _add_milestone_and_life_traces(
 ) -> int:
     """Add vertical life-event markers tinted like the scenario balance line.
 
-    Life-event text is stacked vertically when labels would overlap in year space.
+    Markers use ``_life_event_chart_x`` so a stored policy year ``N`` sits at the
+    start of simulation year ``N`` on the axis. Text is stacked when labels overlap.
     """
     rgb = scenario_rgb
     ev_line = _rgba(rgb, 0.58)
@@ -293,13 +308,17 @@ def _add_milestone_and_life_traces(
     tiers = (
         life_event_tiers
         if len(life_event_tiers) == len(life_rows)
-        else _assign_life_event_vertical_tiers(life_rows, max(1.0, float(x_span_years)))
+        else _assign_life_event_vertical_tiers(
+            [(max(0, y - 1), ann) for y, ann in life_rows],
+            max(1.0, float(x_span_years)),
+        )
     )
     for tier, (y_ev, ann) in zip(tiers, life_rows):
+        x_line = _life_event_chart_x(y_ev)
         y_text = y_max + (float(tier) + 1.0) * life_label_dy
         fig.add_trace(
             go.Scatter(
-                x=[y_ev, y_ev],
+                x=[x_line, x_line],
                 y=[y_min, y_max],
                 mode="lines",
                 name="",
@@ -311,7 +330,7 @@ def _add_milestone_and_life_traces(
         )
         fig.add_trace(
             go.Scatter(
-                x=[y_ev],
+                x=[x_line],
                 y=[y_text],
                 mode="text",
                 text=[ann],
