@@ -1,0 +1,679 @@
+/* FIRE Calculator — dark theme */
+:root {
+  --bg-root: #0d1117;
+  --bg-sidebar: #161b22;
+  --bg-card: #21262d;
+  --bg-input: #0d1117;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-subtle: #6e7681;
+  --accent: #58a6ff;
+  --success: #3fb950;
+  --warning: #d29922;
+  --error: #f85149;
+  --hint-bg: rgba(56, 139, 253, 0.12);
+  --hint-border: rgba(56, 139, 253, 0.35);
+}
+
+body {
+  margin: 0;
+  background: var(--bg-root);
+  color: var(--text);
+}
+
+.app-shell {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg-root);
+  color: var(--text);
+}
+
+.sidebar {
+  flex: 0 0 320px;
+  max-width: 100%;
+  padding: 1rem 1.25rem;
+  border-right: 1px solid var(--border);
+  background: var(--bg-sidebar);
+  box-sizing: border-box;
+}
+
+.main {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 1.25rem 1.5rem;
+  box-sizing: border-box;
+  background: var(--bg-root);
+}
+
+.main h1 {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.main h3 {
+  color: var(--text);
+  margin-top: 0.5rem;
+}
+
+.lead-muted {
+  color: var(--text-muted);
+  max-width: 52rem;
+  line-height: 1.5;
+}
+
+.live-summary {
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.live-summary strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Dash dropdown (react-select) dark styling */
+.dark-dropdown {
+  margin-bottom: 0.5rem;
+}
+
+.dark-dropdown .Select-control,
+.dark-dropdown .select-dropdown-toggle {
+  background-color: var(--bg-input) !important;
+  border-color: var(--border) !important;
+}
+
+.dark-dropdown .Select-value-label,
+.dark-dropdown .Select-placeholder {
+  color: var(--text) !important;
+}
+
+.dark-dropdown .Select-menu-outer {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border) !important;
+}
+
+.dark-dropdown .VirtualizedSelectOption {
+  background-color: var(--bg-card);
+  color: var(--text);
+}
+
+.dark-dropdown .VirtualizedSelectFocusedOption {
+  background-color: #30363d !important;
+}
+
+.sidebar h2 {
+  font-size: 1rem;
+  margin: 1rem 0 0.5rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sidebar h2:first-child {
+  margin-top: 0;
+}
+
+.sidebar-section {
+  margin-bottom: 0.75rem;
+}
+
+.hint {
+  padding: 0.75rem 1rem;
+  background: var(--hint-bg);
+  border: 1px solid var(--hint-border);
+  border-radius: 6px;
+  margin: 1rem 0;
+  color: var(--text-muted);
+}
+
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 720px) {
+  .metrics-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.metric-card {
+  min-width: 0;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.metric-card .label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.metric-card .value {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.milestone-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 520px) {
+  .milestone-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.footer-note {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-subtle);
+  font-size: 0.9rem;
+}
+
+.future-item {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+.future-item summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.row-actions {
+  margin-top: 0.5rem;
+}
+
+.label-inline {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+  color: var(--text-muted);
+}
+
+.sidebar input[type="number"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.4rem 0.55rem;
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.sidebar input[type="number"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(56, 139, 253, 0.25);
+}
+
+.sidebar-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1rem 0;
+}
+
+.btn-accent {
+  margin-top: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+  width: 100%;
+  font-weight: 600;
+  background: #238636;
+  color: #fff;
+  border: 1px solid rgba(240, 246, 252, 0.1);
+  border-radius: 6px;
+}
+
+.btn-accent:hover {
+  background: #2ea043;
+}
+
+.btn-outline {
+  margin-top: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  width: 100%;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.btn-outline:hover {
+  border-color: var(--text-muted);
+  background: #30363d;
+}
+
+.btn-small {
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.btn-small:hover {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.upload-zone {
+  border-width: 1px !important;
+  border-style: dashed !important;
+  border-color: var(--border) !important;
+  border-radius: 6px;
+  padding: 0.75rem;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  background: rgba(22, 27, 34, 0.6);
+  color: var(--text-muted);
+}
+
+.upload-zone a {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.upload-zone:hover {
+  border-color: var(--text-subtle) !important;
+  background: rgba(33, 38, 45, 0.8);
+}
+
+.main details summary {
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+._dash-loading {
+  background: rgba(13, 17, 23, 0.85) !important;
+}
+
+/* Scenario list (sidebar) */
+.scenario-list {
+  margin-top: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.scenario-row {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(22, 27, 34, 0.65);
+}
+
+.scenario-row-active {
+  border-color: rgba(88, 166, 255, 0.45);
+  box-shadow: 0 0 0 1px rgba(88, 166, 255, 0.15);
+}
+
+.scenario-row-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.scenario-row-title {
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scenario-row-toolbar .dash-checklist label {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.scenario-le-row-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Nested life-event popup above scenario dialog */
+#life-event-modal-root.nested-event-overlay {
+  z-index: 10001;
+}
+
+#life-event-modal-root.modal-overlay {
+  color-scheme: dark;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Opaque panel (same as scenario modal — life-event root was missing these rules) */
+#life-event-modal-root .life-event-modal-panel {
+  width: 100%;
+  max-width: 36rem;
+  max-height: min(90vh, 46rem);
+  overflow-y: auto;
+  box-sizing: border-box;
+  background: linear-gradient(165deg, #1c2128 0%, #161b22 55%, #151b22 100%);
+  border: 1px solid rgba(240, 246, 252, 0.08);
+  border-radius: 14px;
+  padding: 1.35rem 1.5rem 1.25rem;
+  box-shadow:
+    0 0 0 1px rgba(1, 4, 9, 0.55),
+    0 24px 56px -16px rgba(0, 0, 0, 0.65);
+}
+
+/* Two-column field grids in scenario + life-event modals */
+#scenario-config-modal-root .scfg-assumptions-grid,
+#life-event-modal-root .scfg-assumptions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1rem;
+  align-items: start;
+}
+
+#scenario-config-modal-root .scfg-assumptions-grid .modal-field,
+#life-event-modal-root .scfg-assumptions-grid .modal-field {
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 520px) {
+  #scenario-config-modal-root .scfg-assumptions-grid,
+  #life-event-modal-root .scfg-assumptions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+#scenario-config-modal-root .scfg-life-events-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  align-items: start;
+}
+
+@media (max-width: 520px) {
+  #scenario-config-modal-root .scfg-life-events-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Scenario config modal (name, compare, life events) */
+#scenario-config-modal-root.modal-overlay {
+  color-scheme: dark;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+#scenario-config-modal-root .modal-panel,
+#scenario-config-modal-root .scenario-config-panel {
+  width: 100%;
+  max-width: 42rem;
+  max-height: min(90vh, 46rem);
+  overflow-y: auto;
+  background: linear-gradient(165deg, #1c2128 0%, #161b22 55%, #151b22 100%);
+  border: 1px solid rgba(240, 246, 252, 0.08);
+  border-radius: 14px;
+  padding: 1.35rem 1.5rem 1.25rem;
+  box-shadow:
+    0 0 0 1px rgba(1, 4, 9, 0.55),
+    0 24px 56px -16px rgba(0, 0, 0, 0.65);
+}
+
+.scenario-config-section {
+  margin-bottom: 1rem;
+}
+
+.scenario-config-subheading {
+  margin: 0.85rem 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+#scenario-config-modal-root .scenario-config-section .dash-checklist label,
+#scenario-config-modal-root .scenario-config-section label {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(48, 54, 61, 0.85);
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+/* Editable scenario / life-event title in modal header (not full-width form fields) */
+#scenario-config-modal-root .modal-header input.modal-title-input,
+#life-event-modal-root .modal-header input.modal-title-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto !important;
+  min-height: 2.25rem;
+  margin: 0;
+  padding: 0.25rem 0.45rem;
+  font-family: inherit;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  color: var(--text) !important;
+  background: rgba(13, 17, 23, 0.65) !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px;
+  box-shadow: none !important;
+}
+
+#scenario-config-modal-root .modal-header input.modal-title-input::placeholder,
+#life-event-modal-root .modal-header input.modal-title-input::placeholder {
+  color: var(--text-subtle);
+  font-weight: 500;
+}
+
+#scenario-config-modal-root .modal-header input.modal-title-input:hover,
+#life-event-modal-root .modal-header input.modal-title-input:hover {
+  border-color: rgba(240, 246, 252, 0.08) !important;
+}
+
+#scenario-config-modal-root .modal-header input.modal-title-input:focus,
+#life-event-modal-root .modal-header input.modal-title-input:focus {
+  outline: none;
+  border-color: rgba(56, 139, 253, 0.45) !important;
+  box-shadow: 0 0 0 3px rgba(56, 139, 253, 0.18) !important;
+}
+
+.modal-close {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  background: rgba(48, 54, 61, 0.55);
+  color: var(--text-muted);
+  border: 1px solid rgba(240, 246, 252, 0.06);
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.modal-close:hover {
+  color: var(--text);
+  background: #30363d;
+  border-color: rgba(240, 246, 252, 0.12);
+}
+
+.modal-lead {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: 0 0 1.15rem;
+}
+
+#scenario-config-modal-root .modal-field,
+#life-event-modal-root .modal-field {
+  margin-bottom: 1rem;
+}
+
+#scenario-config-modal-root .label-inline,
+#life-event-modal-root .label-inline {
+  margin-bottom: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+/* Dash number inputs: beat UA / autofill white backgrounds */
+#scenario-config-modal-root input[type="number"],
+#scenario-config-modal-root input[type="text"],
+#life-event-modal-root input[type="number"],
+#life-event-modal-root input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 2.45rem;
+  padding: 0.5rem 0.7rem;
+  margin: 0;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  color: var(--text) !important;
+  background-color: var(--bg-input) !important;
+  background-image: none !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px;
+  box-shadow: inset 0 1px 2px rgba(1, 4, 9, 0.45);
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#scenario-config-modal-root input::placeholder,
+#life-event-modal-root input::placeholder {
+  color: var(--text-subtle);
+  opacity: 1;
+}
+
+#scenario-config-modal-root input:focus,
+#life-event-modal-root input:focus {
+  outline: none;
+  border-color: var(--accent) !important;
+  box-shadow:
+    inset 0 1px 2px rgba(1, 4, 9, 0.45),
+    0 0 0 3px rgba(56, 139, 253, 0.22);
+}
+
+#scenario-config-modal-root input[type="number"],
+#life-event-modal-root input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+#scenario-config-modal-root input[type="number"]::-webkit-outer-spin-button,
+#scenario-config-modal-root input[type="number"]::-webkit-inner-spin-button,
+#life-event-modal-root input[type="number"]::-webkit-outer-spin-button,
+#life-event-modal-root input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+#scenario-config-modal-root .modal-actions,
+#life-event-modal-root .modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(48, 54, 61, 0.85);
+}
+
+#scenario-config-modal-root .modal-actions-single {
+  grid-template-columns: 1fr;
+}
+
+.scenario-config-done-row {
+  margin-top: 0.25rem;
+  padding-bottom: 0.15rem;
+}
+
+/* Sidebar .btn-outline uses width:100% — in the modal we need two equal columns */
+#scenario-config-modal-root .modal-actions .btn-outline,
+#scenario-config-modal-root .modal-actions .btn-modal-submit,
+#life-event-modal-root .modal-actions .btn-outline,
+#life-event-modal-root .modal-actions .btn-modal-submit {
+  width: 100%;
+  margin-top: 0;
+  min-height: 2.5rem;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+#scenario-config-modal-root .modal-actions .btn-outline,
+#life-event-modal-root .modal-actions .btn-outline {
+  min-width: 0;
+}
+
+#scenario-config-modal-root .btn-modal-submit,
+#life-event-modal-root .btn-modal-submit {
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0.55rem 1rem;
+  background: #238636;
+  color: #fff;
+  border: 1px solid rgba(240, 246, 252, 0.12);
+}
+
+#scenario-config-modal-root .btn-modal-submit:hover,
+#life-event-modal-root .btn-modal-submit:hover {
+  background: #2ea043;
+}
+
+#scenario-config-modal-root .btn-modal-submit:focus-visible,
+#life-event-modal-root .btn-modal-submit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(63, 185, 80, 0.35);
+}

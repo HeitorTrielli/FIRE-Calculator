@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from fire_debug import log_event
 from fire_state import FIREState, FIREStateManager
 
 
@@ -53,44 +54,59 @@ class FIRECalculator:
 
     def calculate_next_year(self, current_state: FIREState) -> Dict[str, Any]:
         """Calculate the next year's results based on the current state."""
-        # Calculate yearly returns
-        yearly_return = current_state.balance * current_state.annual_return_rate
-
-        # Determine income for the next year (considering retirement)
         next_year = current_state.year + 1
-
-        # Check if we have a predefined state for next year that changes income
         next_state = self.state_manager.get_state_at_year(next_year)
-        if next_state and next_state.yearly_income == 0:
-            # If next year has yearly_income = 0, use only non-wage income
-            total_income = current_state.non_wage_income
-        elif (
-            current_state.retirement_year is not None
-            and next_year >= current_state.retirement_year
-        ):
-            # Standard retirement logic
-            total_income = current_state.non_wage_income
-        else:
-            # Normal working income
-            total_income = current_state.yearly_income + current_state.non_wage_income
 
-        # Get lump sum for next year (if any)
+        # When a life-event / future row exists for next_year, cash flows for that
+        # year must come from that row (expenses were wrongly taken from current_year).
+        if next_state is not None:
+            ret_rate = next_state.annual_return_rate
+            expenses_for_year = next_state.yearly_expenses
+            if (
+                current_state.retirement_year is not None
+                and next_year >= current_state.retirement_year
+            ):
+                total_income = next_state.non_wage_income
+            else:
+                total_income = next_state.yearly_income + next_state.non_wage_income
+        else:
+            ret_rate = current_state.annual_return_rate
+            expenses_for_year = current_state.yearly_expenses * (
+                1 + current_state.inflation_rate
+            )
+            if (
+                current_state.retirement_year is not None
+                and next_year >= current_state.retirement_year
+            ):
+                total_income = current_state.non_wage_income
+            else:
+                total_income = current_state.yearly_income + current_state.non_wage_income
+
+        if next_state is not None:
+            log_event(
+                "calculate_next_year:life_event_row",
+                current_year=current_state.year,
+                expenses_applied=expenses_for_year,
+                next_year=next_year,
+                row_yearly_expenses=next_state.yearly_expenses,
+                total_income=total_income,
+            )
+
+        yearly_return = current_state.balance * ret_rate
         lump_sum = next_state.lump_sum if next_state else 0.0
 
-        # Calculate new balance
         new_balance = (
             current_state.balance
             + yearly_return
             + total_income
-            - current_state.yearly_expenses
+            - expenses_for_year
             + lump_sum
         )
 
-        # Calculate inflation-adjusted values
         inflation_factor = (1 + current_state.inflation_rate) ** current_state.year
         adjusted_balance = new_balance / inflation_factor
         adjusted_income = total_income / inflation_factor
-        adjusted_expenses = current_state.yearly_expenses / inflation_factor
+        adjusted_expenses = expenses_for_year / inflation_factor
         adjusted_lump_sum = lump_sum / inflation_factor
 
         return {
@@ -98,7 +114,7 @@ class FIRECalculator:
             "balance": new_balance,
             "yearly_return": yearly_return,
             "yearly_income": total_income,
-            "yearly_expenses": current_state.yearly_expenses,
+            "yearly_expenses": expenses_for_year,
             "lump_sum": lump_sum,
             "adjusted_balance": adjusted_balance,
             "adjusted_income": adjusted_income,

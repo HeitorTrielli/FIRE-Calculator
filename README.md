@@ -1,139 +1,179 @@
-# 🔥 FIRE Calculator
+# FIRE Calculator
 
-A comprehensive Financial Independence, Retire Early (FIRE) calculator built with Streamlit. Plan your path to financial freedom with advanced scenario modeling, future state changes, and detailed visualizations.
+A **Financial Independence, Retire Early (FIRE)** planner built with **Dash** and Plotly. Model multiple **named scenarios**, optional **life events** (income, expenses, returns, lump sums) at specific future years, and **compare** scenario balances on one chart. Results include million-dollar milestones and a year-by-year results table.
 
-## 🚀 Features
+The web UI lives in the **`fire_web`** package; **`app.py`** is the entrypoint. Technical details: **[Application architecture](docs/application-architecture.md)**.
 
-### Core Functionality
-- **Yearly Financial Projections**: Calculate your balance growth over time
-- **FIRE Timeline Calculation**: Determine when you'll reach financial independence
-- **Million Dollar Milestones**: Track when you hit major wealth milestones
-- **Future Scenario Planning**: Model changes in income, expenses, and returns over time
-- **Lump Sum Events**: Include one-time income (inheritance, bonuses) or expenses (house, car)
-- **Retirement Planning**: Automatic transition from wage income to investment returns
+---
 
-### Advanced Features
-- **Non-Wage Income**: Model rental income, dividends, or side businesses that continue after retirement
-- **Inflation Modeling**: Account for purchasing power erosion over time
-- **Configuration Management**: Save and load different financial scenarios
-- **Interactive Visualizations**: Four-panel charts showing balance, income vs expenses, returns vs expenses, and net cash flow
-- **Detailed Results Table**: Year-by-year breakdown of all financial metrics
+### Documentation for developers
 
-## 📋 Requirements
+- **[Application architecture](docs/application-architecture.md)** — Package layout (`fire_web`), scenario / life-event data model, `fire_config.json` formats, callbacks, simulation pipeline, persistence, tests, extension points.
 
-- Python 3.8+
-- Streamlit
-- Plotly
-- Pandas
+---
 
-## 🛠️ Installation
+## Features
 
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd FIRE-Calculator
-   ```
+### Core
 
-2. **Install dependencies**:
-   ```bash
-   pip install streamlit plotly pandas
-   ```
+- **Year-by-year projections** — Balance, income, expenses, returns, lump sums, inflation-adjusted metrics where applicable.
+- **Named scenarios** — Each scenario has its own starting assumptions and life events.
+- **Life events** — At year *N* from today, override wages, expenses, non-wage income, return rate, or add a lump sum; optional **name** for chart markers.
+- **Retirement** — After **Retirement in Years**, wage income stops; **non-wage income** can continue.
+- **Million-dollar milestones** — Timing and labels on the balance chart.
+- **Starting balance** — Can be negative to approximate starting debt.
 
-3. **Run the application**:
-   ```bash
-   streamlit run app.py
-   ```
+### Advanced
 
-4. **Open your browser** to `http://localhost:8501`
+- **Compare on chart** — Overlay balance curves for any scenarios you enable (active scenario still drives the detailed subplots for income/expenses/cash flow).
+- **Inflation** — Modeled on the expense path when no life-event row overrides that year.
+- **Import / export** — Download all scenarios as JSON; upload to replace or merge via file picker.
+- **Auto-save** — Scenarios persist to **`fire_config.json`** in the project folder when you save from the UI or perform actions that write config (see architecture doc).
 
-## 🎯 How to Use
+### UI
 
-### 1. Initial Setup
-Configure your starting financial state in the sidebar:
+- **Scenario modal** — Scenario **name** in the header; **starting assumptions** in a two-column grid; **life events** list with add/edit/remove (life events open a nested modal).
+- **Live summary** — Active scenario snapshot and simulation horizon from the sidebar.
+- **Detailed results** — Expand **Detailed Results** to see the full DataTable (no pagination).
 
-- **Initial Balance**: Your current investment portfolio value
-- **Yearly Wage Income**: Your salary/wage income (stops at retirement)
-- **Non-Wage Income**: Income that continues after retirement (rentals, dividends)
-- **Yearly Expenses**: Your total annual expenses
-- **Annual Return Rate**: Expected investment return (typically 6-8%)
-- **Inflation Rate**: Expected annual inflation (typically 2-3%)
-- **Retirement Year**: When you plan to stop working
+---
 
-### 2. Add Future Changes
-Plan for life changes using the "Future State Changes" section:
+## Requirements
 
-- **Income Changes**: Salary increases, career changes, or retirement
-- **Expense Changes**: Lifestyle inflation or downsizing
-- **Return Rate Changes**: Different investment strategies over time
-- **Lump Sum Events**: 
-  - Positive: Inheritance, bonuses, stock options
-  - Negative: Major purchases (house down payment, car, etc.)
+- **Python 3.8+** (newer Python recommended for current Pandas/Dash stacks)
+- Dependencies are pinned in **`requirements.txt`** (`dash`, `plotly`, `pandas`, `numpy`, `pytest` for tests).
 
-### 3. Run Calculations
-Click "🚀 Calculate FIRE Trajectory" to generate:
+---
 
-- **Financial projections** for your specified timeline
-- **Interactive charts** showing your wealth accumulation
-- **Million dollar milestones** with exact timing
-- **Detailed year-by-year breakdown** in expandable table
+## Installation
 
-### 4. Configuration Management
-- **Download**: Save your current configuration as JSON
-- **Upload**: Load a previously saved configuration
-- **Auto-load**: App automatically loads `fire_config.json` on startup
-
-## 📊 Understanding the Charts
-
-### 1. Balance Over Time
-- Shows your total investment balance growth
-- Golden dashed lines mark million-dollar milestones
-- Main indicator of FIRE progress
-
-### 2. Income vs Expenses
-- Green line: Total income (wage + non-wage)
-- Red line: Annual expenses
-- Gap between lines = annual savings
-
-### 3. Returns vs Expenses
-- Orange line: Investment returns each year
-- Red line: Annual expenses
-- When orange exceeds red = financially independent
-
-### 4. Net Cash Flow
-- Purple area: Total cash flow (income - expenses + lump sums)
-- Shows annual contribution to wealth building
-- Negative values indicate spending more than earning
-
-## 💡 Example Scenarios
-
-### Basic FIRE Journey
-```
-Initial Balance: $50,000
-Yearly Income: $75,000
-Yearly Expenses: $45,000
-Annual Return: 7%
-Retirement Year: 15
+```bash
+git clone <repository-url>
+cd FIRE-Calculator
+pip install -r requirements.txt
 ```
 
-### Career Progression
-```
-Year 10: Income increases to $90,000, expenses to $50,000
-Year 12: $100,000 inheritance
-Year 15: Retirement (wage income stops)
+---
+
+## Run the app
+
+```bash
+python app.py
 ```
 
-### Major Purchase
-```
-Year 8: -$500,000 lump sum (house down payment)
-Year 10: Expenses increase to $60,000 (mortgage payments)
-```
+Open **http://127.0.0.1:8050** (default Dash development server).
 
-## 🔧 Configuration Files
+---
 
-### JSON Structure
+## How to use
+
+### 1. Scenarios (sidebar)
+
+- **＋ Add scenario** — Opens the configuration modal with empty defaults (or use **Edit** on a card).
+- **Active** — Chooses which scenario powers the **detailed** charts (income vs expenses, returns, net cash flow) and the **live summary** text.
+- **Compare on chart** — When checked, that scenario’s **balance** line is drawn on the top-left plot alongside other checked scenarios.
+- **Edit** — Opens the scenario modal: title field = scenario name, then starting assumptions and life events.
+- **Remove** — Deletes a scenario (at least one must remain).
+
+### 2. Starting assumptions (scenario modal)
+
+Set **initial balance**, wage and non-wage income, expenses, annual return and inflation **percentages**, and **retirement year** (year index when wage income stops). **Save scenario** stores changes and writes **`fire_config.json`** when possible.
+
+### 3. Life events
+
+Inside the scenario modal, **＋ Add life event** opens the life-event dialog:
+
+- **Title field** = event name (optional; used on charts).
+- **Year (from now)** and any **financial overrides** you need; leave blanks to keep the projected path from previous years.
+- At least one financial change is required (the app will prompt if you only set a year/name).
+
+Events are listed in **chronological order** by year.
+
+### 4. Simulation (sidebar)
+
+- **Years to Simulate** — Horizon for the projection (e.g. 20 years).
+- **Calculate FIRE Trajectory** — Runs the engine for the **active** scenario and refreshes metrics, charts, milestones, and the detailed table.
+
+### 5. Main area
+
+- **Live summary** — Active scenario name, starting balance, horizon, retirement year, life-event count, compare counts.
+- **Metric cards** — Final balance, first million milestone, highest milestone band.
+- **Financial Trajectory** — Four-panel chart (balance with comparisons; income/expenses; returns vs expenses; net cash flow).
+- **Million Dollar Milestones** — Cards when milestones exist.
+- **Detailed Results** — Full year-by-year table inside an expandable section.
+
+### 6. Configuration file
+
+- **Download Configuration** — Exports all scenarios as JSON (version 2 format).
+- **Upload Configuration** — Loads a file; legacy single-scenario files are migrated automatically.
+- On startup, if **`fire_config.json`** exists next to **`app.py`**, it is loaded to restore scenarios.
+
+---
+
+## Understanding the charts
+
+### Balance Over Time (comparison)
+
+- Primary view of wealth vs time.
+- **Gold dashed** vertical lines: million-dollar milestones.
+- **Dot** lines: named life events (when calculated).
+- Multiple **colored** lines when several scenarios have **Compare on chart** enabled.
+
+### Income vs Expenses (active scenario)
+
+- Green: income; red: expenses.
+
+### Returns vs Expenses (active scenario)
+
+- Orange: investment returns; red: expenses.
+
+### Net Cash Flow (active scenario)
+
+- Purple: income − expenses + lump sums (with fill).
+
+---
+
+## Example workflows
+
+### Simple FIRE path
+
+Create a scenario (e.g. **Baseline**), set roughly:
+
+- Initial balance `$50,000`, yearly wage `$75,000`, expenses `$45,000`, return **7%**, inflation **2.5%**, retirement year **15**, then **Calculate**.
+
+### Career + inheritance
+
+Add life events on the scenario:
+
+- Year **10**: higher income / expenses if desired.
+- Year **12**: positive **lump sum** (inheritance).
+- Year **15**: align with retirement (wage drops per assumptions).
+
+### Major purchase
+
+- Year **8**: lump sum **−500,000** (if your convention treats outflows as negative lump sums — enter per modal validation).
+- Year **10**: expense override for higher housing costs.
+
+*(Exact keys follow the JSON schema below; the modal writes the same structure.)*
+
+---
+
+## Configuration JSON
+
+### Current format (version 2)
+
+The app saves and downloads a **scenario list**:
+
 ```json
 {
-    "initial_state": {
+  "version": 2,
+  "active_scenario_id": "abc123def456",
+  "scenarios": [
+    {
+      "id": "abc123def456",
+      "name": "Baseline",
+      "compare": true,
+      "initial_state": {
         "initial_balance": 50000,
         "yearly_income": 75000,
         "yearly_expenses": 45000,
@@ -141,86 +181,108 @@ Year 10: Expenses increase to $60,000 (mortgage payments)
         "inflation_rate": 0.025,
         "non_wage_income": 5000,
         "retirement_year": 15
-    },
-    "future_states": [
+      },
+      "life_events": [
         {
-            "year": 10,
-            "yearly_income": 90000,
-            "yearly_expenses": 50000
+          "year": 10,
+          "yearly_income": 90000,
+          "yearly_expenses": 50000,
+          "name": "Promotion"
         },
         {
-            "year": 12,
-            "lump_sum": 100000
+          "year": 12,
+          "lump_sum": 100000,
+          "name": "Inheritance"
         }
-    ]
+      ]
+    }
+  ]
 }
 ```
 
-### Sharing Configurations
-1. Configure your scenario in the app
-2. Click "📥 Download Configuration"
-3. Share the JSON file with others
-4. They can upload it using "Upload Configuration" → "🔄 Update Config"
+Rates in **`initial_state`** are stored as **decimals** (`0.07` = 7%). Life-event rows may store display-friendly **return rates** in the UI layer; the engine normalizes percent vs decimal where needed.
 
-## 🧮 Running Examples
+### Legacy format (version 1)
 
-### Command Line Example
+Older files used top-level **`initial_state`** and **`future_states`** only. The app still **imports** these and wraps them into a single scenario named **Baseline**.
+
+### Sharing configs
+
+1. Use **Download Configuration** in the sidebar.
+2. Share the JSON file.
+3. Recipients use **Upload Configuration** to load it (ensure `fire_config.json` is writable if you rely on auto-save).
+
+---
+
+## Running the sample script
+
 ```bash
 python example.py
 ```
 
-This runs a sample calculation and prints results to the console, demonstrating the core calculation engine.
-
-### Streamlit Web App
-```bash
-streamlit run app.py
-```
-
-This launches the full interactive web application with charts and configuration management.
-
-## 📈 Key Concepts
-
-### FIRE Number
-Your FIRE number is typically 25x your annual expenses (4% withdrawal rule). The app calculates when you'll reach this milestone.
-
-### Safe Withdrawal Rate
-The app assumes you can safely withdraw 4% of your portfolio annually in retirement without depleting it.
-
-### Sequence of Returns Risk
-The app models year-by-year returns, helping you understand how market volatility affects your timeline.
-
-### Coast FIRE
-When your investment returns exceed your expenses, you've reached "Coast FIRE" - you could stop saving and still retire comfortably.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## 📄 License
-
-This project is open source and available under the MIT License.
-
-## 🆘 Support
-
-If you encounter issues or have questions:
-
-1. Check the example configurations
-2. Verify your JSON file format
-3. Ensure all required fields are present
-4. Try restarting the app with a fresh configuration
-
-## 🎉 Tips for Success
-
-1. **Be Conservative**: Use realistic return rates (6-8%) and account for inflation
-2. **Plan for Changes**: Model salary increases, lifestyle inflation, and major purchases
-3. **Regular Updates**: Revisit and update your projections annually
-4. **Multiple Scenarios**: Create different configurations for optimistic/pessimistic cases
-5. **Track Progress**: Compare actual results to projections and adjust as needed
+Runs a **console-only** sample using the core calculator (no Dash UI).
 
 ---
 
-**Built with ❤️ using Streamlit • Enhanced FIRE Calculator with Future State Planning** 
+## Tests
+
+```bash
+python -m pytest tests/test_app.py
+```
+
+Covers helpers, simulation wiring, and migration paths.
+
+---
+
+## Key concepts
+
+### FIRE number
+
+Often discussed as **25× annual expenses** (4% annual withdrawal). This app focuses on **projected balances and milestones** rather than enforcing a single FIRE number formula.
+
+### Safe withdrawal rate
+
+The underlying engine includes withdrawal-rate assumptions in **`fire_calculator.py`** for related logic; the Dash UI emphasizes trajectory and milestones.
+
+### Sequence of returns
+
+Year-by-year simulation illustrates how volatility ordering affects balances versus a smooth average return.
+
+---
+
+## Contributing
+
+1. Fork the repository  
+2. Create a feature branch  
+3. Make changes (prefer tests for calculation or parsing changes)  
+4. Submit a pull request  
+
+---
+
+## License
+
+MIT License — see repository license file.
+
+---
+
+## Troubleshooting
+
+1. **Nothing plots** — Choose **Active**, enter assumptions, **Save scenario**, then **Calculate FIRE Trajectory**.  
+2. **Compare shows one line** — Enable **Compare on chart** on multiple scenarios.  
+3. **Life event rejected** — Add at least one financial field besides year/name.  
+4. **Config not sticking** — Check write permissions for **`fire_config.json`** in the project directory.  
+5. **Upload errors** — Use valid JSON; v2 must include a non-empty **`scenarios`** array; v1 must include **`initial_state`**.  
+
+---
+
+## Tips
+
+1. Use **conservative** returns (e.g. 6–8%) and realistic inflation.  
+2. Model **several scenarios** (aggressive savings vs baseline vs higher spend).  
+3. **Revisit** assumptions yearly and adjust life events.  
+4. Use **Compare** to see balance paths without duplicating spreadsheets.  
+5. Read **`docs/application-architecture.md`** before larger code changes.  
+
+---
+
+Built with **Dash** and Plotly • FIRE Calculator with named scenarios and life events  

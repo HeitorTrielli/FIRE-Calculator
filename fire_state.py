@@ -109,6 +109,17 @@ class FIREStateManager:
 
         # Create new state with new parameters, inheriting from reference state if not specified
         # Note: balance will be set to 0.0 initially and updated by the calculator
+
+        # Calculate inflation-adjusted expenses if inheriting from reference state
+        if yearly_expenses is not None:
+            # User provided new expenses - use as-is (these are in today's dollars)
+            adjusted_expenses = yearly_expenses
+        else:
+            # Inherit expenses from reference state and adjust for inflation
+            years_difference = year - reference_state.year
+            inflation_factor = (1 + reference_state.inflation_rate) ** years_difference
+            adjusted_expenses = reference_state.yearly_expenses * inflation_factor
+
         new_state = FIREState(
             year=year,
             balance=0.0,  # Placeholder - will be updated by calculator
@@ -117,11 +128,7 @@ class FIREStateManager:
                 if yearly_income is not None
                 else reference_state.yearly_income
             ),
-            yearly_expenses=(
-                yearly_expenses
-                if yearly_expenses is not None
-                else reference_state.yearly_expenses
-            ),
+            yearly_expenses=adjusted_expenses,
             annual_return_rate=(
                 annual_return_rate
                 if annual_return_rate is not None
@@ -186,11 +193,16 @@ class FIREStateManager:
 
         # Create new state inheriting all parameters from current state
         # Note: lump_sum defaults to 0.0 for new states (lump sums are one-time only)
+        # Apply inflation to expenses for the next year
+        inflated_expenses = current_state.yearly_expenses * (
+            1 + current_state.inflation_rate
+        )
+
         new_state = FIREState(
             year=next_year,
             balance=new_balance,
             yearly_income=current_state.yearly_income,
-            yearly_expenses=current_state.yearly_expenses,
+            yearly_expenses=inflated_expenses,
             annual_return_rate=current_state.annual_return_rate,
             inflation_rate=current_state.inflation_rate,
             non_wage_income=current_state.non_wage_income,
