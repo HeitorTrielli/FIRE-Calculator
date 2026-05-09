@@ -6,6 +6,12 @@ import copy
 import pandas as pd
 import pytest
 
+from fire_web.bootstrap import (
+    _upgrade_scenario_retirement_field,
+    duplicate_scenario_record,
+    reorder_scenarios_by_id_order,
+)
+
 from app import (
     _fv,
     _life_events_server_get,
@@ -19,6 +25,65 @@ from app import (
     build_simulation,
     format_results_table,
 )
+
+
+def test_upgrade_scenario_retirement_field_migrates_once():
+    scen = {
+        "id": "x",
+        "name": "S",
+        "initial_state": {"retirement_year": 12, "yearly_income": 50_000.0},
+        "life_events": [{"year": 3, "yearly_expenses": 1000.0}],
+    }
+    out = _upgrade_scenario_retirement_field(scen)
+    assert "retirement_year" not in out["initial_state"]
+    years = [e["year"] for e in out["life_events"]]
+    assert years == [3, 12]
+    assert out["life_events"][-1]["name"] == "Retirement year"
+    assert out["life_events"][-1]["yearly_income"] == pytest.approx(0.0)
+    assert "retirement_year" in scen["initial_state"]
+
+
+def test_upgrade_scenario_retirement_field_skips_if_retirement_row_exists():
+    scen = {
+        "id": "x",
+        "name": "S",
+        "initial_state": {"retirement_year": 99, "yearly_income": 1.0},
+        "life_events": [{"year": 10, "name": "Retirement year", "yearly_income": 0.0}],
+    }
+    out = _upgrade_scenario_retirement_field(scen)
+    assert "retirement_year" not in out["initial_state"]
+    assert len(out["life_events"]) == 1
+    assert out["life_events"][0]["year"] == 10
+
+
+def test_reorder_scenarios_by_id_order():
+    scenarios = [
+        {"id": "a", "name": "A"},
+        {"id": "b", "name": "B"},
+        {"id": "c", "name": "C"},
+    ]
+    out = reorder_scenarios_by_id_order(scenarios, ["c", "a", "b"])
+    assert [s["id"] for s in out] == ["c", "a", "b"]
+    assert reorder_scenarios_by_id_order(scenarios, ["a", "b"]) is None
+    assert reorder_scenarios_by_id_order(scenarios, ["a", "b", "x"]) is None
+
+
+def test_duplicate_scenario_record_new_id_and_name():
+    src = {
+        "id": "origid123456",
+        "name": "Baseline",
+        "compare": True,
+        "initial_state": {"initial_balance": 100.0, "yearly_income": 50.0},
+        "life_events": [{"year": 3, "yearly_expenses": 40_000.0}],
+    }
+    dup = duplicate_scenario_record(src)
+    assert dup["id"] != src["id"]
+    assert len(dup["id"]) == 12
+    assert dup["name"] == "Baseline (copy)"
+    assert dup["initial_state"]["initial_balance"] == pytest.approx(100.0)
+    assert dup["life_events"] == [{"year": 3, "yearly_expenses": 40_000.0}]
+    assert src["life_events"][0] is not dup["life_events"][0]
+    assert src["initial_state"] is not dup["initial_state"]
 
 
 def test_server_life_events_cache_put_get_pop():
@@ -63,7 +128,6 @@ def test_inputs_initial_state_roundtrip_percent_fields():
         7.0,
         3.0,
         0,
-        20,
     )
     assert init["annual_return_rate"] == pytest.approx(0.07)
     assert init["inflation_rate"] == pytest.approx(0.03)
@@ -72,6 +136,41 @@ def test_inputs_initial_state_roundtrip_percent_fields():
     assert back["annual_return_rate"] == pytest.approx(0.07)
     assert back["inflation_rate"] == pytest.approx(0.03)
     assert back["initial_balance"] == pytest.approx(350_000)
+
+
+def test_inputs_to_initial_state_mixed_monthly_and_yearly():
+    snap = _inputs_to_initial_state(
+        0,
+        5_000,
+        120_000,
+        0,
+        0,
+        250,
+        ["m"],
+        [],
+        ["m"],
+    )
+    assert snap["yearly_income"] == pytest.approx(60_000)
+    assert snap["yearly_expenses"] == pytest.approx(120_000)
+    assert snap["non_wage_income"] == pytest.approx(3_000)
+    assert snap["input_income_monthly"] is True
+    assert snap["input_expenses_monthly"] is False
+    assert snap["input_non_wage_monthly"] is True
+
+
+def test_initial_to_input_values_roundtrip_mixed_cadence():
+    init = _inputs_to_initial_state(100, 5_000, 100_000, 5, 2, 600, ["m"], [], ["m"])
+    tup = _initial_to_input_values(init)
+    assert tup[1] == pytest.approx(5_000)
+    assert tup[2] == pytest.approx(100_000)
+    assert tup[5] == pytest.approx(600)
+    assert tup[6] == ["m"]
+    assert tup[7] == []
+    assert tup[8] == ["m"]
+    back = _inputs_to_initial_state(*tup)
+    assert back["yearly_income"] == pytest.approx(60_000)
+    assert back["yearly_expenses"] == pytest.approx(100_000)
+    assert back["non_wage_income"] == pytest.approx(7_200)
 
 
 def test_migrate_config_v1_to_scenarios():
@@ -92,6 +191,11 @@ def test_migrate_config_v1_to_scenarios():
     assert scenarios[0]["id"] == sid
     assert scenarios[0]["life_events"][0]["year"] == 5
     assert scenarios[0]["initial_state"]["yearly_income"] == 50000
+    assert "retirement_year" not in scenarios[0]["initial_state"]
+    assert any(
+        e.get("year") == 15 and str(e.get("name", "")).lower() == "retirement year"
+        for e in scenarios[0]["life_events"]
+    )
 
 
 def test_build_simulation_life_event_zero_income_zero_expenses_year_five():
@@ -103,9 +207,9 @@ def test_build_simulation_life_event_zero_income_zero_expenses_year_five():
         annual_return_rate=0.07,
         inflation_rate=0.0,
         non_wage_income=0,
-        retirement_year=8,
         future_states=[
             {"year": 5, "yearly_income": 0.0, "yearly_expenses": 0.0},
+            {"year": 8, "name": "Retirement year", "yearly_income": 0.0},
         ],
         max_years=10,
     )
@@ -124,8 +228,10 @@ def test_build_simulation_life_event_expenses_year_five():
         annual_return_rate=0.07,
         inflation_rate=0.03,
         non_wage_income=0,
-        retirement_year=25,
-        future_states=[{"year": 5, "yearly_expenses": 120_000}],
+        future_states=[
+            {"year": 5, "yearly_expenses": 120_000},
+            {"year": 25, "name": "Retirement year", "yearly_income": 0.0},
+        ],
         max_years=10,
     )
     by_year = {r["year"]: r for r in payload["results"]}
@@ -135,6 +241,7 @@ def test_build_simulation_life_event_expenses_year_five():
 
 def test_build_simulation_ignores_life_event_name_meta_key():
     """``name`` is for charts/UI only and must not affect the simulation engine."""
+    _ret = {"year": 30, "name": "Retirement year", "yearly_income": 0.0}
     with_meta, _ = build_simulation(
         100_000,
         50_000,
@@ -142,8 +249,7 @@ def test_build_simulation_ignores_life_event_name_meta_key():
         0.05,
         0.02,
         0,
-        30,
-        [{"year": 3, "yearly_expenses": 99_000, "name": "Big expense"}],
+        [{"year": 3, "yearly_expenses": 99_000, "name": "Big expense"}, _ret],
         5,
     )
     plain, _ = build_simulation(
@@ -153,8 +259,7 @@ def test_build_simulation_ignores_life_event_name_meta_key():
         0.05,
         0.02,
         0,
-        30,
-        [{"year": 3, "yearly_expenses": 99_000}],
+        [{"year": 3, "yearly_expenses": 99_000}, _ret],
         5,
     )
     assert with_meta["results"] == plain["results"]
@@ -168,8 +273,10 @@ def test_build_simulation_future_state_year_as_string():
         0.05,
         0.02,
         0,
-        30,
-        [{"year": "3", "yearly_expenses": 99_000}],
+        [
+            {"year": "3", "yearly_expenses": 99_000},
+            {"year": 30, "name": "Retirement year", "yearly_income": 0.0},
+        ],
         5,
     )
     assert any(r["year"] == 3 and r["yearly_expenses"] == pytest.approx(99_000) for r in payload["results"])
@@ -184,8 +291,10 @@ def test_build_simulation_annual_return_percent_vs_decimal():
         0.05,
         0,
         0,
-        99,
-        [{"year": 2, "annual_return_rate": 0.07}],
+        [
+            {"year": 2, "annual_return_rate": 0.07},
+            {"year": 99, "name": "Retirement year", "yearly_income": 0.0},
+        ],
         3,
     )
     pct, _ = build_simulation(
@@ -195,8 +304,10 @@ def test_build_simulation_annual_return_percent_vs_decimal():
         0.05,
         0,
         0,
-        99,
-        [{"year": 2, "annual_return_rate": 7.0}],
+        [
+            {"year": 2, "annual_return_rate": 7.0},
+            {"year": 99, "name": "Retirement year", "yearly_income": 0.0},
+        ],
         3,
     )
     y2d = {r["year"]: r for r in dec["results"]}
@@ -212,8 +323,7 @@ def test_format_results_table_columns_and_shape():
         0.04,
         0.02,
         0,
-        10,
-        [],
+        [{"year": 10, "name": "Retirement year", "yearly_income": 0.0}],
         2,
     )
     df = format_results_table(payload)

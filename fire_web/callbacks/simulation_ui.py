@@ -5,11 +5,11 @@ from __future__ import annotations
 import base64
 import copy
 import json
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import dash.dash_table as dash_table
 import plotly.graph_objects as go
-from dash import Input, Output, State, callback, ctx, dcc, html, no_update
+from dash import Input, Output, State, callback, dcc, html
 from dash.exceptions import PreventUpdate
 
 from fire_debug import log_callback_context, log_event, log_verbose_bundle
@@ -22,12 +22,38 @@ from fire_web.persist import (
     life_events_server_reset_from_scenarios,
     persist_scenarios_to_disk,
 )
+from fire_web.chart_gallery import build_chart_gallery_children
 from fire_web.simulation import (
-    build_figure,
     build_simulation,
     format_results_table,
+    is_retirement_life_event_name,
     sim_from_scenario,
+    sort_life_events_chronologically,
 )
+
+
+def _life_events_display_rows_from_scenario(scenario: Dict[str, Any]) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for fs_item in sort_life_events_chronologically(scenario.get("life_events")):
+        try:
+            yr_m = int(float(fs_item["year"]))
+        except (KeyError, TypeError, ValueError):
+            continue
+        rows.append({"year": yr_m, "name": str(fs_item.get("name") or "").strip()})
+    return rows
+
+
+def _wage_stop_year_label(_init: Dict[str, Any], life_events: Any) -> str:
+    for ev in sorted(
+        life_events or [],
+        key=lambda x: int(float(x.get("year", 0) or 0)),
+    ):
+        if is_retirement_life_event_name(ev.get("name")):
+            try:
+                return str(max(1, int(float(ev["year"]))))
+            except (KeyError, TypeError, ValueError):
+                continue
+    return "—"
 
 
 @callback(
@@ -45,10 +71,7 @@ def update_live_summary(max_y, scenarios, aid):
         horizon = int(max_y) if max_y not in (None, "") else 20
     except (TypeError, ValueError):
         horizon = 20
-    try:
-        ret_y = int(init.get("retirement_year", 1) or 1)
-    except (TypeError, ValueError):
-        ret_y = 1
+    ret_y = _wage_stop_year_label(init, scen.get("life_events"))
     bal = float(init.get("initial_balance", 0) or 0)
     name = scen.get("name") or "—"
     n_ev = len(scen.get("life_events") or [])
@@ -66,8 +89,8 @@ def update_live_summary(max_y, scenarios, aid):
                     html.Strong(f"${bal:,.0f}"),
                     f" · horizon ",
                     html.Strong(f"{horizon} yr"),
-                    f" · wage stops year ",
-                    html.Strong(str(ret_y)),
+                    f" · wage income → 0 in year ",
+                    html.Strong(ret_y),
                     f" · ",
                     html.Strong(str(n_ev)),
                     " life event(s) · ",
@@ -114,10 +137,6 @@ def run_calculate(
     arr = float(init.get("annual_return_rate", 0) or 0)
     inf = float(init.get("inflation_rate", 0) or 0)
     nw = float(init.get("non_wage_income", 0) or 0)
-    try:
-        ry = int(init.get("retirement_year", 1) or 1)
-    except (TypeError, ValueError):
-        ry = 1
 
     fs = list(active_scen.get("life_events") or [])
     merge_source = "scenarios_store"
@@ -152,10 +171,11 @@ def run_calculate(
         },
     )
 
-    active_payload, _ = build_simulation(ib, yi, ye, arr, inf, nw, ry, fs, my)
+    fs_sorted = sort_life_events_chronologically(fs)
+    active_payload, _ = build_simulation(ib, yi, ye, arr, inf, nw, fs_sorted, my)
 
     meta_rows: List[Dict[str, Any]] = []
-    for fs_item in fs:
+    for fs_item in fs_sorted:
         try:
             yr_m = int(float(fs_item["year"]))
         except (KeyError, TypeError, ValueError):
@@ -172,14 +192,16 @@ def run_calculate(
         except StopIteration:
             compare_set = [scen_list[0]] if scen_list else []
 
-    overlay: List[Tuple[str, Dict[str, Any]]] = []
+    overlay: List[Tuple[str, str, Dict[str, Any]]] = []
     for s in compare_set:
         try:
-            if s["id"] == active_id:
+            sid = str(s["id"])
+            if sid == str(active_id):
                 pl = active_payload
             else:
                 pl = sim_from_scenario(s, my)
-            overlay.append((s.get("name", "Scenario"), pl))
+                pl["life_events_display"] = _life_events_display_rows_from_scenario(s)
+            overlay.append((str(s.get("name", "Scenario")), sid, pl))
         except (ValueError, KeyError, IndexError):
             continue
 
@@ -193,7 +215,7 @@ def run_calculate(
 
 @callback(
     Output("metrics-row", "children"),
-    Output("main-graph", "figure"),
+    Output("charts-gallery", "children"),
     Output("milestone-section", "children"),
     Output("results-table-container", "children"),
     Output("main-hint", "children"),
@@ -202,7 +224,12 @@ def run_calculate(
     State("scenarios-store", "data"),
     State("active-scenario-id", "data"),
 )
-def render_main(sim_data, config_had_initial, scenarios, active_id):
+def render_main(
+    sim_data,
+    config_had_initial,
+    scenarios,
+    active_id,
+):
     hint_empty_setup = html.Span(
         "Add a scenario with **＋ Add scenario**, enter your numbers, save, then click "
         "**Calculate FIRE Trajectory**."
@@ -220,36 +247,34 @@ def render_main(sim_data, config_had_initial, scenarios, active_id):
         if scen:
             ib = float(scen.get("initial_state", {}).get("initial_balance", 0) or 0)
             n_ev = len(scen.get("life_events") or [])
+        empty_charts = html.Div(
+            className="chart-gallery-empty",
+            children=html.P(
+                [
+                    "Run ",
+                    html.Strong("Calculate FIRE Trajectory"),
+                    " to populate charts.",
+                ]
+            ),
+        )
         if config_had_initial or n_ev or ib != 0:
             return (
                 [],
-                go.Figure(
-                    layout={
-                        "template": "plotly_dark",
-                        "paper_bgcolor": "rgba(0,0,0,0)",
-                        "plot_bgcolor": "rgba(0,0,0,0)",
-                    }
-                ),
+                empty_charts,
                 html.Div(),
                 html.Div(),
                 hint_click_calc,
             )
         return (
             [],
-            go.Figure(
-                layout={
-                    "template": "plotly_dark",
-                    "paper_bgcolor": "rgba(0,0,0,0)",
-                    "plot_bgcolor": "rgba(0,0,0,0)",
-                }
-            ),
+            empty_charts,
             html.Div(),
             html.Div(),
             hint_empty_setup,
         )
 
     active_payload = sim_data.get("active_payload") or sim_data
-    overlays = sim_data.get("balance_overlays")
+    overlays = list(sim_data.get("balance_overlays") or [])
 
     milestones: List[Dict[str, Any]] = active_payload["milestones"]
     results: List[Dict[str, Any]] = active_payload["results"]
@@ -274,36 +299,34 @@ def render_main(sim_data, config_had_initial, scenarios, active_id):
         m3_val = "0"
         m3_title = "No milestones reached"
 
-    metrics = html.Div(
-        [
-            html.Div(
-                className="metric-card",
-                title=f"Projected balance in {max_years} years",
-                children=[
-                    html.Div("Final Balance", className="label"),
-                    html.Div(f"${final_balance:,.0f}", className="value"),
-                ],
-            ),
-            html.Div(
-                className="metric-card",
-                title=m2_title if first_m else None,
-                children=[
-                    html.Div(m2_label, className="label"),
-                    html.Div(m2_val, className="value"),
-                ],
-            ),
-            html.Div(
-                className="metric-card",
-                title=m3_title,
-                children=[
-                    html.Div("Highest Milestone", className="label"),
-                    html.Div(m3_val, className="value"),
-                ],
-            ),
-        ]
-    )
+    metrics = [
+        html.Div(
+            className="metric-card",
+            title=f"Projected balance in {max_years} years",
+            children=[
+                html.Div("Final Balance", className="label"),
+                html.Div(f"${final_balance:,.0f}", className="value"),
+            ],
+        ),
+        html.Div(
+            className="metric-card",
+            title=m2_title if first_m else None,
+            children=[
+                html.Div(m2_label, className="label"),
+                html.Div(m2_val, className="value"),
+            ],
+        ),
+        html.Div(
+            className="metric-card",
+            title=m3_title,
+            children=[
+                html.Div("Highest Milestone", className="label"),
+                html.Div(m3_val, className="value"),
+            ],
+        ),
+    ]
 
-    fig = build_figure(active_payload, overlays)
+    gallery = build_chart_gallery_children(active_payload, overlays)
 
     mile_children = []
     if milestones:
@@ -338,7 +361,13 @@ def render_main(sim_data, config_had_initial, scenarios, active_id):
         page_action="none",
     )
 
-    return metrics, fig, html.Div(mile_children), table, html.Div()
+    return (
+        metrics,
+        gallery,
+        html.Div(mile_children),
+        table,
+        html.Div(),
+    )
 
 
 def _upload_err(msg: html.Span):

@@ -7,7 +7,7 @@ This document describes how the Dash web application is structured, how data flo
 | Layer | Technology |
 |-------|------------|
 | UI framework | [Dash](https://dash.plotly.com/) (Plotly) |
-| Charts | Plotly Graph Objects, subplot grid |
+| Charts | Plotly Graph Objects (overview + gallery figures) |
 | Tables | `dash_table.DataTable` |
 | Numerics / tables | NumPy, Pandas |
 | Simulation core | Custom modules: `fire_calculator.py`, `fire_state.py` |
@@ -183,7 +183,7 @@ For each scenario with `compare` true (or fallback to active only), **`sim_from_
 
 ### 8.3 `build_figure`
 
-Renders a 2×2 subplot: balance (with overlays), income vs expenses, returns vs expenses, net cash flow. Adds milestone vertical lines and **life event** vertical lines using `life_events_display` (names + years) attached to the payload in **`run_calculate`**.
+Renders a **single** nominal-balance chart (with optional scenario overlays), plus milestone and life-event vertical lines from `life_events_display` on **`run_calculate`**. Additional charts live in **`fire_web/chart_gallery.py`**.
 
 ### 8.4 Detailed results table
 

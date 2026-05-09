@@ -14,6 +14,7 @@ from fire_web.bootstrap import (
     _initial_to_input_values,
     _inputs_to_initial_state,
     config_file_path,
+    duplicate_scenario_record,
 )
 from fire_web.constants import MODAL_STYLE_CLOSED, MODAL_STYLE_OPEN
 from fire_web.persist import (
@@ -34,8 +35,15 @@ def render_scenario_sidebar_list(
     active_id: Optional[str],
 ):
     if not scenarios:
-        return html.P(
-            "No scenarios.", className="lead-muted", style={"fontSize": "0.85rem"}
+        return html.Div(
+            className="scenario-rows-root",
+            children=[
+                html.P(
+                    "No scenarios.",
+                    className="lead-muted",
+                    style={"fontSize": "0.85rem"},
+                )
+            ],
         )
     rows = []
     for s in scenarios:
@@ -43,15 +51,20 @@ def render_scenario_sidebar_list(
         is_active = sid == active_id
         rows.append(
             html.Div(
-                className="scenario-row"
-                + (" scenario-row-active" if is_active else ""),
+                className="scenario-row" + (" scenario-row-active" if is_active else ""),
+                **{"data-sid": sid},
                 children=[
                     html.Div(
                         className="scenario-row-title-row",
                         children=[
-                            html.Span(
-                                s.get("name") or "Untitled",
-                                className="scenario-row-title",
+                            html.Div(
+                                className="scenario-row-title-left",
+                                children=[
+                                    html.Span(
+                                        s.get("name") or "Untitled",
+                                        className="scenario-row-title",
+                                    ),
+                                ],
                             ),
                             html.Button(
                                 "Active",
@@ -97,6 +110,18 @@ def render_scenario_sidebar_list(
                                         },
                                     ),
                                     html.Button(
+                                        "Copy",
+                                        id={"type": "scen-copy", "sid": sid},
+                                        n_clicks=0,
+                                        className="btn-outline",
+                                        style={
+                                            "flex": "1",
+                                            "marginTop": 0,
+                                            "minWidth": "4rem",
+                                        },
+                                        title="Duplicate this scenario",
+                                    ),
+                                    html.Button(
                                         "Remove",
                                         id={"type": "scen-remove", "sid": sid},
                                         n_clicks=0,
@@ -114,7 +139,7 @@ def render_scenario_sidebar_list(
                 ],
             )
         )
-    return html.Div(rows)
+    return html.Div(className="scenario-rows-root", children=rows)
 
 
 @callback(
@@ -128,7 +153,9 @@ def render_scenario_sidebar_list(
     Output("scfg-annual-return-pct", "value"),
     Output("scfg-inflation-pct", "value"),
     Output("scfg-non-wage-income", "value"),
-    Output("scfg-retirement-year", "value"),
+    Output("scfg-income-monthly", "value"),
+    Output("scfg-expenses-monthly", "value"),
+    Output("scfg-nonwage-monthly", "value"),
     Input("btn-add-scenario", "n_clicks"),
     Input({"type": "scen-edit", "sid": ALL}, "n_clicks"),
     State("scenarios-store", "data"),
@@ -157,7 +184,7 @@ def open_scenario_modal(n_add, _edit_clicks, scenarios):
             raise PreventUpdate
         scen = scenarios[idx]
         init = scen["initial_state"]
-        ib, yi, ye, arp, inf, nw, ry = _initial_to_input_values(init)
+        ib, yi, ye, arp, inf, nw, inc_m, exp_m, nw_m = _initial_to_input_values(init)
         return (
             MODAL_STYLE_OPEN,
             sid,
@@ -169,7 +196,9 @@ def open_scenario_modal(n_add, _edit_clicks, scenarios):
             arp,
             inf,
             nw,
-            ry,
+            inc_m,
+            exp_m,
+            nw_m,
         )
     raise PreventUpdate
 
@@ -202,7 +231,9 @@ def cancel_scenario_modal(_cancel, _close):
     State("scfg-annual-return-pct", "value"),
     State("scfg-inflation-pct", "value"),
     State("scfg-non-wage-income", "value"),
-    State("scfg-retirement-year", "value"),
+    State("scfg-income-monthly", "value"),
+    State("scfg-expenses-monthly", "value"),
+    State("scfg-nonwage-monthly", "value"),
     State("scfg-life-events-draft", "data"),
     State("scenarios-store", "data"),
     State("active-scenario-id", "data"),
@@ -218,7 +249,9 @@ def save_scenario_modal(
     arp,
     inf,
     nw,
-    ry,
+    inc_monthly,
+    exp_monthly,
+    nw_monthly,
     draft_events,
     scenarios,
     cur_active,
@@ -226,7 +259,18 @@ def save_scenario_modal(
     if not n_clicks:
         raise PreventUpdate
     scen_list = copy.deepcopy(scenarios or [])
-    snap = _inputs_to_initial_state(ib, yi, ye, arp, inf, nw, ry)
+    snap = _inputs_to_initial_state(
+        ib,
+        yi,
+        ye,
+        arp,
+        inf,
+        nw,
+        inc_monthly,
+        exp_monthly,
+        nw_monthly,
+    )
+    snap.pop("retirement_year", None)
     nm = (name or "").strip() or "Untitled scenario"
     events = sort_life_events_chronologically(list(draft_events or []))
     if target_id is None:
@@ -308,6 +352,56 @@ def toggle_scenario_compare(checkbox_values, scenarios, active_id):
             break
     persist_scenarios_to_disk(out, active_id)
     return out
+
+
+@callback(
+    Output("scenarios-store", "data", allow_duplicate=True),
+    Output("scenario-sidebar-msg", "children", allow_duplicate=True),
+    Input({"type": "scen-copy", "sid": ALL}, "n_clicks"),
+    State("scenarios-store", "data"),
+    State("active-scenario-id", "data"),
+    prevent_initial_call=True,
+)
+def copy_scenario_sidebar(_clicks, scenarios, aid):
+    trig = ctx.triggered_id
+    if not isinstance(trig, dict) or trig.get("type") != "scen-copy":
+        raise PreventUpdate
+    sid = trig["sid"]
+    order = [s["id"] for s in (scenarios or [])]
+    try:
+        ix = order.index(sid)
+    except ValueError:
+        raise PreventUpdate
+    cl = list(_clicks or [])
+    if ix >= len(cl) or int(cl[ix] or 0) < 1:
+        raise PreventUpdate
+    src = next((s for s in (scenarios or []) if s["id"] == sid), None)
+    if not src:
+        raise PreventUpdate
+    new_scen = duplicate_scenario_record(src)
+    out = copy.deepcopy(scenarios or [])
+    out.append(new_scen)
+    life_events_server_put(
+        new_scen["id"],
+        list(new_scen.get("life_events") or []),
+        "sidebar_copy",
+    )
+    disk_err = persist_scenarios_to_disk(out, aid)
+    nm = new_scen.get("name", "Copy")
+    msg = (
+        html.Div(
+            [
+                html.Span(f"Copied to “{nm}”. ", style={"color": "#3fb950"}),
+                html.Span(
+                    f"Could not write {config_file_path().name}: {disk_err}",
+                    style={"color": "#d29922", "fontSize": "0.82rem"},
+                ),
+            ]
+        )
+        if disk_err
+        else html.Span(f"Copied to “{nm}”.", style={"color": "#3fb950"})
+    )
+    return out, msg
 
 
 @callback(

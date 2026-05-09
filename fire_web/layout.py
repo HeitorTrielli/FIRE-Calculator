@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import plotly.graph_objects as go
 from dash import dcc, html
 
 from fire_web.bootstrap import (
@@ -115,19 +114,21 @@ def build_layout() -> html.Div:
                     dcc.Store(id="sim-output-store", data=None),
                     dcc.Store(id="config-had-initial", data=CONFIG_HAD_INITIAL),
                     html.Div(id="metrics-row", className="metrics-row"),
-                    html.H3("Financial Trajectory"),
+                    html.H3("Charts gallery"),
                     dcc.Loading(
-                        id="loading-graph",
+                        id="loading-charts",
                         type="default",
                         children=[
-                            dcc.Graph(
-                                id="main-graph",
-                                figure=go.Figure(
-                                    layout={
-                                        "template": "plotly_dark",
-                                        "paper_bgcolor": "rgba(0,0,0,0)",
-                                        "plot_bgcolor": "rgba(0,0,0,0)",
-                                    }
+                            html.Div(
+                                id="charts-gallery",
+                                className="chart-gallery",
+                                children=html.P(
+                                    [
+                                        "Run ",
+                                        html.Strong("Calculate FIRE Trajectory"),
+                                        " to populate charts.",
+                                    ],
+                                    className="chart-gallery-empty",
                                 ),
                             )
                         ],
@@ -180,7 +181,9 @@ def build_layout() -> html.Div:
                                 ],
                             ),
                             html.P(
-                                "Enter starting assumptions for this scenario. Add life events below "
+                                "Enter starting assumptions for this scenario. For wage income, living "
+                                "expenses, and non-wage income you can check Monthly on any field "
+                                "independently (the rest stay yearly). Add life events below "
                                 "(each opens in its own dialog). Save applies everything to your scenario "
                                 "list — Calculate runs from saved scenarios.",
                                 className="modal-lead",
@@ -211,9 +214,30 @@ def build_layout() -> html.Div:
                                     html.Div(
                                         className="modal-field",
                                         children=[
-                                            html.Span(
-                                                "Yearly Wage Income ($)",
-                                                className="label-inline",
+                                            html.Div(
+                                                className="scfg-field-head",
+                                                children=[
+                                                    html.Span(
+                                                        "Wage income ($)",
+                                                        className="label-inline",
+                                                    ),
+                                                    dcc.Checklist(
+                                                        id="scfg-income-monthly",
+                                                        options=[
+                                                            {
+                                                                "label": "Monthly",
+                                                                "value": "m",
+                                                            }
+                                                        ],
+                                                        value=SCFG_BOOT_VALUES[6],
+                                                        className="scfg-monthly-toggle",
+                                                        inputStyle={"marginRight": "0.35rem"},
+                                                        labelStyle={
+                                                            "fontSize": "0.8rem",
+                                                            "color": "var(--text-muted)",
+                                                        },
+                                                    ),
+                                                ],
                                             ),
                                             dcc.Input(
                                                 id="scfg-yearly-income",
@@ -228,9 +252,30 @@ def build_layout() -> html.Div:
                                     html.Div(
                                         className="modal-field",
                                         children=[
-                                            html.Span(
-                                                "Non-Wage Income ($)",
-                                                className="label-inline",
+                                            html.Div(
+                                                className="scfg-field-head",
+                                                children=[
+                                                    html.Span(
+                                                        "Non-wage income ($)",
+                                                        className="label-inline",
+                                                    ),
+                                                    dcc.Checklist(
+                                                        id="scfg-nonwage-monthly",
+                                                        options=[
+                                                            {
+                                                                "label": "Monthly",
+                                                                "value": "m",
+                                                            }
+                                                        ],
+                                                        value=SCFG_BOOT_VALUES[8],
+                                                        className="scfg-monthly-toggle",
+                                                        inputStyle={"marginRight": "0.35rem"},
+                                                        labelStyle={
+                                                            "fontSize": "0.8rem",
+                                                            "color": "var(--text-muted)",
+                                                        },
+                                                    ),
+                                                ],
                                             ),
                                             dcc.Input(
                                                 id="scfg-non-wage-income",
@@ -245,9 +290,30 @@ def build_layout() -> html.Div:
                                     html.Div(
                                         className="modal-field",
                                         children=[
-                                            html.Span(
-                                                "Yearly Expenses ($)",
-                                                className="label-inline",
+                                            html.Div(
+                                                className="scfg-field-head",
+                                                children=[
+                                                    html.Span(
+                                                        "Living expenses ($)",
+                                                        className="label-inline",
+                                                    ),
+                                                    dcc.Checklist(
+                                                        id="scfg-expenses-monthly",
+                                                        options=[
+                                                            {
+                                                                "label": "Monthly",
+                                                                "value": "m",
+                                                            }
+                                                        ],
+                                                        value=SCFG_BOOT_VALUES[7],
+                                                        className="scfg-monthly-toggle",
+                                                        inputStyle={"marginRight": "0.35rem"},
+                                                        labelStyle={
+                                                            "fontSize": "0.8rem",
+                                                            "color": "var(--text-muted)",
+                                                        },
+                                                    ),
+                                                ],
                                             ),
                                             dcc.Input(
                                                 id="scfg-yearly-expenses",
@@ -295,24 +361,6 @@ def build_layout() -> html.Div:
                                             ),
                                         ],
                                     ),
-                                    html.Div(
-                                        className="modal-field",
-                                        children=[
-                                            html.Span(
-                                                "Retirement in Years",
-                                                className="label-inline",
-                                            ),
-                                            dcc.Input(
-                                                id="scfg-retirement-year",
-                                                type="number",
-                                                min=1,
-                                                max=50,
-                                                step=1,
-                                                value=SCFG_BOOT_VALUES[6],
-                                                style={"width": "100%"},
-                                            ),
-                                        ],
-                                    ),
                                 ],
                             ),
                             html.H4(
@@ -320,8 +368,9 @@ def build_layout() -> html.Div:
                                 className="scenario-config-subheading",
                             ),
                             html.P(
-                                "Events apply from that year forward. Named events appear as markers "
-                                "on charts after Calculate.",
+                                "Events apply from that year forward. Add a life event with "
+                                "yearly income 0 to stop wage income from that year on. "
+                                "Named events appear as markers on charts after Calculate.",
                                 className="modal-lead",
                                 style={"marginBottom": "0.65rem"},
                             ),

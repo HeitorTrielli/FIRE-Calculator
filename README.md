@@ -25,7 +25,7 @@ The web UI lives in the **`fire_web`** package; **`app.py`** is the entrypoint. 
 
 ### Advanced
 
-- **Compare on chart** — Overlay balance curves for any scenarios you enable (active scenario still drives the detailed subplots for income/expenses/cash flow).
+- **Compare on chart** — Overlay **nominal balance** curves for any scenarios you enable on the overview chart (the active scenario is still what **Calculate** runs for the gallery and table).
 - **Inflation** — Modeled on the expense path when no life-event row overrides that year.
 - **Import / export** — Download all scenarios as JSON; upload to replace or merge via file picker.
 - **Auto-save** — Scenarios persist to **`fire_config.json`** in the project folder when you save from the UI or perform actions that write config (see architecture doc).
@@ -73,6 +73,7 @@ Open **http://127.0.0.1:8050** (default Dash development server).
 - **Active** — Chooses which scenario powers the **detailed** charts (income vs expenses, returns, net cash flow) and the **live summary** text.
 - **Compare on chart** — When checked, that scenario’s **balance** line is drawn on the top-left plot alongside other checked scenarios.
 - **Edit** — Opens the scenario modal: title field = scenario name, then starting assumptions and life events.
+- **Copy** — Duplicates the scenario (new id, same numbers and life events, name suffixed with `(copy)`), appends it to the list, and saves to `fire_config.json` when possible.
 - **Remove** — Deletes a scenario (at least one must remain).
 
 ### 2. Starting assumptions (scenario modal)
@@ -98,7 +99,7 @@ Events are listed in **chronological order** by year.
 
 - **Live summary** — Active scenario name, starting balance, horizon, retirement year, life-event count, compare counts.
 - **Metric cards** — Final balance, first million milestone, highest milestone band.
-- **Financial Trajectory** — Four-panel chart (balance with comparisons; income/expenses; returns vs expenses; net cash flow).
+- **Charts gallery** — **Overview** is nominal balance only (with optional compare overlays), then **investment returns vs expenses** for the same compared scenarios, then nominal vs real balance, yearly balance change, income minus expenses, and FIRE cushion (balance ÷ expenses).
 - **Million Dollar Milestones** — Cards when milestones exist.
 - **Detailed Results** — Full year-by-year table inside an expandable section.
 
@@ -112,24 +113,14 @@ Events are listed in **chronological order** by year.
 
 ## Understanding the charts
 
-### Balance Over Time (comparison)
+### Overview (nominal balance)
 
-- Primary view of wealth vs time.
+- Primary view of wealth vs time (nominal dollars).
 - **Gold dashed** vertical lines: million-dollar milestones.
 - **Dot** lines: named life events (when calculated).
 - Multiple **colored** lines when several scenarios have **Compare on chart** enabled.
 
-### Income vs Expenses (active scenario)
-
-- Green: income; red: expenses.
-
-### Returns vs Expenses (active scenario)
-
-- Orange: investment returns; red: expenses.
-
-### Net Cash Flow (active scenario)
-
-- Purple: income − expenses + lump sums (with fill).
+Other gallery charts cover real vs nominal balance, returns vs expenses, yearly balance change, income minus expenses, and “years of expenses” cushion.
 
 ---
 

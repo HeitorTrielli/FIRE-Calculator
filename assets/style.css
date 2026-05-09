@@ -148,6 +148,40 @@ body {
   }
 }
 
+.chart-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.chart-gallery-lead {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0 0 0.25rem;
+}
+
+.chart-gallery-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0.25rem 0 0;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.chart-gallery-empty {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 1rem 0;
+}
+
+.chart-gallery .js-plotly-plot {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
 .metric-card {
   min-width: 0;
   padding: 0.75rem 1rem;
@@ -322,6 +356,12 @@ body {
   gap: 0.65rem;
 }
 
+.scenario-rows-root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
 .scenario-row {
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--border);
@@ -340,6 +380,14 @@ body {
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.35rem;
+}
+
+.scenario-row-title-left {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  flex: 1;
 }
 
 .scenario-row-title {
@@ -405,6 +453,25 @@ body {
 #scenario-config-modal-root .scfg-assumptions-grid .modal-field,
 #life-event-modal-root .scfg-assumptions-grid .modal-field {
   margin-bottom: 0.75rem;
+}
+
+#scenario-config-modal-root .scfg-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+#scenario-config-modal-root .scfg-field-head .label-inline {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+#scenario-config-modal-root .scfg-monthly-toggle {
+  flex-shrink: 0;
+  margin: 0;
 }
 
 @media (max-width: 520px) {
