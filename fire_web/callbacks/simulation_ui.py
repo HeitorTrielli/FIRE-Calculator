@@ -11,12 +11,9 @@ from dash.exceptions import PreventUpdate
 
 from fire_debug import log_callback_context, log_event, log_verbose_bundle
 from fire_web.bootstrap import CONFIG_HAD_INITIAL
-from fire_web.constants import DT_CELL, DT_HEADER
-from fire_web.persist import (
-    life_events_server_debug_snapshot,
-    life_events_server_get,
-)
 from fire_web.chart_gallery import build_chart_gallery_children
+from fire_web.constants import DT_CELL, DT_HEADER
+from fire_web.persist import life_events_server_debug_snapshot, life_events_server_get
 from fire_web.simulation import (
     build_simulation,
     format_results_table,
@@ -26,7 +23,9 @@ from fire_web.simulation import (
 )
 
 
-def _life_events_display_rows_from_scenario(scenario: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _life_events_display_rows_from_scenario(
+    scenario: Dict[str, Any],
+) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     for fs_item in sort_life_events_chronologically(scenario.get("life_events")):
         try:
@@ -174,9 +173,7 @@ def run_calculate(
             yr_m = int(float(fs_item["year"]))
         except (KeyError, TypeError, ValueError):
             continue
-        meta_rows.append(
-            {"year": yr_m, "name": str(fs_item.get("name") or "").strip()}
-        )
+        meta_rows.append({"year": yr_m, "name": str(fs_item.get("name") or "").strip()})
     active_payload["life_events_display"] = meta_rows
 
     compare_set = [s for s in scen_list if s.get("compare")]
