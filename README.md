@@ -18,20 +18,21 @@ The web UI lives in the **`fire_web`** package; **`app.py`** is the entrypoint. 
 
 - **Year-by-year projections** — Balance, income, expenses, returns, lump sums, inflation-adjusted metrics where applicable.
 - **Named scenarios** — Each scenario has its own starting assumptions and life events.
-- **Life events** — At year *N* from today, override wages, expenses, non-wage income, return rate, or add a lump sum; optional **name** for chart markers.
-- **Retirement** — After **Retirement in Years**, wage income stops; **non-wage income** can continue.
+- **Life events** — At year *N* from today, override wages, expenses, non-wage income, return rate, or add a lump sum; optional **name** for chart markers. Events apply from the start of that simulation year forward.
+- **Retirement** — Model stopping work as a life event with **yearly income 0**. Name it **Retirement year** so the live summary shows when wage income drops to zero. **Non-wage income** continues unless you override it.
 - **Million-dollar milestones** — Timing and labels on the balance chart.
 - **Starting balance** — Can be negative to approximate starting debt.
+- **Monthly or yearly inputs** — Wage income, living expenses, and non-wage income each have an independent **Monthly** checkbox. Stored values are always annualized.
 
 ### Advanced
 
-- **Compare on chart** — Overlay **nominal balance** curves for any scenarios you enable on the overview chart (the active scenario is still what **Calculate** runs for the gallery and table).
+- **Compare on chart** — Overlay **nominal balance** (and **investment returns vs expenses**) for any scenarios you enable. The **active** scenario still drives the remaining gallery charts, metric cards, and the detailed table.
 - **Inflation** — Modeled on the expense path when no life-event row overrides that year.
-- **Auto-save** — Scenarios persist to **`fire_config.json`** in the project folder when you save from the UI or perform actions that write config (see architecture doc).
+- **Persistence** — Saving a scenario, copying, removing, activating, toggling compare, or clicking **Save all scenarios** writes **`fire_config.json`** in the project folder.
 
 ### UI
 
-- **Scenario modal** — Scenario **name** in the header; **starting assumptions** in a two-column grid; **life events** list with add/edit/remove (life events open a nested modal).
+- **Scenario modal** — Scenario **name** in the header; **starting assumptions** in a two-column grid (with optional monthly toggles); **life events** list with add/edit/remove (life events open a nested modal).
 - **Live summary** — Active scenario snapshot and simulation horizon from the sidebar.
 - **Detailed results** — Expand **Detailed Results** to see the full DataTable (no pagination).
 
@@ -40,7 +41,7 @@ The web UI lives in the **`fire_web`** package; **`app.py`** is the entrypoint. 
 ## Requirements
 
 - **Python 3.8+** (newer Python recommended for current Pandas/Dash stacks)
-- Dependencies are pinned in **`requirements.txt`** (`dash`, `plotly`, `pandas`, `numpy`, `pytest` for tests).
+- Dependencies are listed in **`requirements.txt`** (`dash`, `plotly`, `pandas`, `numpy`, `pytest` for tests).
 
 ---
 
@@ -69,36 +70,40 @@ Open **http://127.0.0.1:8050** (default Dash development server).
 ### 1. Scenarios (sidebar)
 
 - **＋ Add scenario** — Opens the configuration modal with empty defaults (or use **Edit** on a card).
-- **Active** — Chooses which scenario powers the **detailed** charts (income vs expenses, returns, net cash flow) and the **live summary** text.
-- **Compare on chart** — When checked, that scenario’s **balance** line is drawn on the top-left plot alongside other checked scenarios.
+- **Active** — Chooses which scenario powers the **detailed** charts (nominal vs real, yearly change, income minus expenses, FIRE cushion), the **metric cards**, the **live summary**, and the results table.
+- **Compare on chart** — When checked, that scenario’s **balance** line (and **returns vs expenses** series) is drawn alongside other checked scenarios.
 - **Edit** — Opens the scenario modal: title field = scenario name, then starting assumptions and life events.
-- **Copy** — Duplicates the scenario (new id, same numbers and life events, name suffixed with `(copy)`), appends it to the list, and saves to `fire_config.json` when possible.
+- **Copy** — Duplicates the scenario (new id, same numbers and life events, name suffixed with `(copy)`), appends it to the list, and writes `fire_config.json` when possible.
 - **Remove** — Deletes a scenario (at least one must remain).
+- **Save all scenarios** — Writes the current scenario list to **`fire_config.json`** in the project folder.
 
 ### 2. Starting assumptions (scenario modal)
 
-Set **initial balance**, wage and non-wage income, expenses, annual return and inflation **percentages**, and **retirement year** (year index when wage income stops). **Save scenario** stores changes and writes **`fire_config.json`** when possible.
+Set **initial balance**, wage and non-wage income, living expenses, and annual return and inflation **percentages**. Check **Monthly** on wage, expenses, or non-wage independently if you prefer to type monthly amounts (the rest stay yearly). **Save scenario** stores changes and writes **`fire_config.json`** when possible.
+
+There is no separate retirement-year field. To stop wage income, add a life event (see below).
 
 ### 3. Life events
 
 Inside the scenario modal, **＋ Add life event** opens the life-event dialog:
 
-- **Title field** = event name (optional; used on charts).
+- **Title field** = event name (optional; used on charts and the live summary).
 - **Year (from now)** and any **financial overrides** you need; leave blanks to keep the projected path from previous years.
 - At least one financial change is required (the app will prompt if you only set a year/name).
+- Set **yearly income to 0** to stop wages from that year on. Naming the event **Retirement year** is how the live summary reports “wage income → 0 in year *N*”.
 
-Events are listed in **chronological order** by year.
+Events apply from the **start of that simulation year** (chart markers line up with the first balance change) and are listed in **chronological order**.
 
 ### 4. Simulation (sidebar)
 
-- **Years to Simulate** — Horizon for the projection (e.g. 20 years).
-- **Calculate FIRE Trajectory** — Runs the engine for the **active** scenario and refreshes metrics, charts, milestones, and the detailed table.
+- **Years to Simulate** — Horizon for the projection (5–50 years; default 20).
+- **Calculate FIRE Trajectory** — Runs the engine for the **active** scenario and refreshes metrics, charts, milestones, and the detailed table. Compared scenarios are simulated for overlay charts.
 
 ### 5. Main area
 
-- **Live summary** — Active scenario name, starting balance, horizon, retirement year, life-event count, compare counts.
+- **Live summary** — Active scenario name, starting balance, horizon, wage-stop year (from a **Retirement year** event), life-event count, compare counts.
 - **Metric cards** — Final balance, first million milestone, highest milestone band.
-- **Charts gallery** — **Overview** is nominal balance only (with optional compare overlays), then **investment returns vs expenses** for the same compared scenarios, then nominal vs real balance, yearly balance change, income minus expenses, and FIRE cushion (balance ÷ expenses).
+- **Charts gallery** — **Overview** is nominal balance (with optional compare overlays), then **investment returns vs expenses** for the same compared scenarios, then (active scenario only) nominal vs real balance, yearly balance change, income minus expenses, and FIRE cushion (balance ÷ expenses).
 - **Million Dollar Milestones** — Cards when milestones exist.
 - **Detailed Results** — Full year-by-year table inside an expandable section.
 
@@ -117,7 +122,7 @@ On startup, if **`fire_config.json`** exists next to **`app.py`**, it is loaded 
 - **Dot** lines: named life events (when calculated).
 - Multiple **colored** lines when several scenarios have **Compare on chart** enabled.
 
-Other gallery charts cover real vs nominal balance, returns vs expenses, yearly balance change, income minus expenses, and “years of expenses” cushion.
+**Investment returns vs annual expenses** uses the same compare list. Other gallery charts (real vs nominal balance, yearly balance change, income minus expenses, and “years of expenses” cushion) use the **active** scenario only.
 
 ---
 
@@ -127,7 +132,7 @@ Other gallery charts cover real vs nominal balance, returns vs expenses, yearly 
 
 Create a scenario (e.g. **Baseline**), set roughly:
 
-- Initial balance `$50,000`, yearly wage `$75,000`, expenses `$45,000`, return **7%**, inflation **2.5%**, retirement year **15**, then **Calculate**.
+- Initial balance `$50,000`, yearly wage `$75,000`, expenses `$45,000`, return **7%**, inflation **2.5%**, then add a life event at year **15** named **Retirement year** with yearly income **0**, then **Calculate**.
 
 ### Career + inheritance
 
@@ -135,7 +140,7 @@ Add life events on the scenario:
 
 - Year **10**: higher income / expenses if desired.
 - Year **12**: positive **lump sum** (inheritance).
-- Year **15**: align with retirement (wage drops per assumptions).
+- Year **15**: **Retirement year** with yearly income **0** (wage stops; non-wage income continues unless you override it).
 
 ### Major purchase
 
@@ -150,7 +155,7 @@ Add life events on the scenario:
 
 ### Current format (version 2)
 
-The app saves and downloads a **scenario list**:
+The app persists a **scenario list** to **`fire_config.json`**:
 
 ```json
 {
@@ -168,7 +173,9 @@ The app saves and downloads a **scenario list**:
         "annual_return_rate": 0.07,
         "inflation_rate": 0.025,
         "non_wage_income": 5000,
-        "retirement_year": 15
+        "input_income_monthly": false,
+        "input_expenses_monthly": false,
+        "input_non_wage_monthly": false
       },
       "life_events": [
         {
@@ -181,6 +188,11 @@ The app saves and downloads a **scenario list**:
           "year": 12,
           "lump_sum": 100000,
           "name": "Inheritance"
+        },
+        {
+          "year": 15,
+          "yearly_income": 0,
+          "name": "Retirement year"
         }
       ]
     }
@@ -188,11 +200,13 @@ The app saves and downloads a **scenario list**:
 }
 ```
 
-Rates in **`initial_state`** are stored as **decimals** (`0.07` = 7%). Life-event rows may store display-friendly **return rates** in the UI layer; the engine normalizes percent vs decimal where needed.
+Dollar amounts in **`initial_state`** are **annual** (monthly UI entries are multiplied by 12 on save). The `input_*_monthly` flags only remember how the modal should display those fields. Rates in **`initial_state`** are **decimals** (`0.07` = 7%). Life-event rows may store display-friendly **return rates** in the UI layer; the engine normalizes percent vs decimal where needed.
+
+Older configs that still have **`initial_state.retirement_year`** are upgraded on load: that field is dropped and a **Retirement year** life event (`yearly_income` 0) is added once if missing.
 
 ### Legacy format (version 1)
 
-Older files used top-level **`initial_state`** and **`future_states`** only. The app still **imports** these and wraps them into a single scenario named **Baseline**.
+Older files used top-level **`initial_state`** and **`future_states`** only. The app still **imports** these and wraps them into a single scenario named **Baseline**. A legacy **`retirement_year`** becomes a **Retirement year** life event.
 
 ### Sharing configs
 
@@ -216,7 +230,7 @@ Runs a **console-only** sample using the core calculator (no Dash UI).
 python -m pytest tests/test_app.py
 ```
 
-Covers helpers, simulation wiring, and migration paths.
+Covers helpers, simulation wiring, monthly vs yearly input coercion, retirement-field migration, and related scenario helpers.
 
 ---
 
@@ -238,36 +252,37 @@ Year-by-year simulation illustrates how volatility ordering affects balances ver
 
 ## Contributing
 
-1. Fork the repository  
-2. Create a feature branch  
-3. Make changes (prefer tests for calculation or parsing changes)  
-4. Submit a pull request  
+1. Fork the repository
+2. Create a feature branch
+3. Make changes (prefer tests for calculation or parsing changes)
+4. Submit a pull request
 
 ---
 
 ## License
 
-MIT License — see repository license file.
+GNU General Public License v3.0 — see **[LICENSE](LICENSE)**.
 
 ---
 
 ## Troubleshooting
 
-1. **Nothing plots** — Choose **Active**, enter assumptions, **Save scenario**, then **Calculate FIRE Trajectory**.  
-2. **Compare shows one line** — Enable **Compare on chart** on multiple scenarios.  
-3. **Life event rejected** — Add at least one financial field besides year/name.  
-4. **Config not sticking** — Check write permissions for **`fire_config.json`** in the project directory.  
+1. **Nothing plots** — Choose **Active**, enter assumptions, **Save scenario**, then **Calculate FIRE Trajectory**.
+2. **Compare shows one line** — Enable **Compare on chart** on multiple scenarios.
+3. **Life event rejected** — Add at least one financial field besides year/name.
+4. **Wages never stop** — Add a life event with yearly income **0** (name it **Retirement year** for the live summary).
+5. **Config not sticking** — Use **Save all scenarios** and check write permissions for **`fire_config.json`** in the project directory.
 
 ---
 
 ## Tips
 
-1. Use **conservative** returns (e.g. 6–8%) and realistic inflation.  
-2. Model **several scenarios** (aggressive savings vs baseline vs higher spend).  
-3. **Revisit** assumptions yearly and adjust life events.  
-4. Use **Compare** to see balance paths without duplicating spreadsheets.  
-5. Read **`docs/application-architecture.md`** before larger code changes.  
+1. Use **conservative** returns (e.g. 6–8%) and realistic inflation.
+2. Model **several scenarios** (aggressive savings vs baseline vs higher spend).
+3. **Revisit** assumptions yearly and adjust life events.
+4. Use **Compare** to see balance (and returns vs expenses) paths without duplicating spreadsheets.
+5. Read **`docs/application-architecture.md`** before larger code changes.
 
 ---
 
-Built with **Dash** and Plotly • FIRE Calculator with named scenarios and life events  
+Built with **Dash** and Plotly • FIRE Calculator with named scenarios and life events
